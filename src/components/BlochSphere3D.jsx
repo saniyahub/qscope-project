@@ -1,7 +1,47 @@
-import  React, { useRef, useMemo } from 'react'
+import React, { useRef, useMemo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Sphere, Line, Text, PerspectiveCamera } from '@react-three/drei'
 import * as THREE from 'three'
+
+// Error Boundary Component
+class BlochSphere3DErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('BlochSphere3D Error:', error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex items-center justify-center h-96 bg-slate-900/50 rounded-xl border border-slate-700/50">
+          <div className="text-center p-6">
+            <div className="w-16 h-16 mx-auto mb-4 bg-red-500/20 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-red-500 rounded-full"></div>
+            </div>
+            <h3 className="text-lg font-semibold text-red-400 mb-2">3D Rendering Error</h3>
+            <p className="text-slate-400 text-sm mb-4">WebGL may not be supported in your browser</p>
+            <button 
+              onClick={() => this.setState({ hasError: false, error: null })}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    return this.props.children
+  }
+}
 
 function  BlochSphere({ vector, index, vectors }) { 
   const sphereRef = useRef()
@@ -217,19 +257,21 @@ export default function BlochSphere3D({ vectors }) {
   }
 
   return (
-    <div className="h-96 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl border border-slate-700/50 overflow-hidden">
-      <Canvas
-        shadows
-        camera={{ position: [4, 2, 4], fov: 60 }}
-        gl={{ 
-          antialias: true,
-          alpha: true,
-          powerPreference: "high-performance"
-        }}
-      >
-        <Scene vectors={vectors} />
-      </Canvas>
-    </div>
+    <BlochSphere3DErrorBoundary>
+      <div className="h-96 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl border border-slate-700/50 overflow-hidden">
+        <Canvas
+          shadows
+          camera={{ position: [4, 2, 4], fov: 60 }}
+          gl={{ 
+            antialias: true,
+            alpha: true,
+            powerPreference: "high-performance"
+          }}
+        >
+          <Scene vectors={vectors} />
+        </Canvas>
+      </div>
+    </BlochSphere3DErrorBoundary>
   )
 }
  

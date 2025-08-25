@@ -1,4 +1,4 @@
-import  { useMemo } from 'react'
+import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { Globe, Eye, RotateCcw } from 'lucide-react'
 import BlochSphere3D from './BlochSphere3D'

@@ -1,7 +1,9 @@
-import  { BookOpen, Info, Lightbulb } from 'lucide-react'
+import { BookOpen, Info, Lightbulb } from 'lucide-react'
 import { GateDescriptions } from '../utils/constants'
+import { useAppContext } from '../context/AppContext'
 
-export default function LearningPanel({ selectedGate, circuit }) {
+export default function LearningPanel() {
+  const { selectedGate, circuit } = useAppContext()
   const getCircuitExplanation = () => {
     if (circuit.length === 0) return "Start by selecting a gate and adding it to your circuit."
     

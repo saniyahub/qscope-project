@@ -1,4 +1,4 @@
-import  { useMemo } from 'react'
+import { useMemo } from 'react'
 import { BarChart, Activity } from 'lucide-react'
 
 export default function ProbabilityView({ quantumState }) {

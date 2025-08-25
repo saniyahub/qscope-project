@@ -1,6 +1,14 @@
-import  { LogOut, User } from 'lucide-react'
+import { RotateCcw, Settings } from 'lucide-react'
+import { useAppContext } from '../context/AppContext'
 
-export default function Navigation({ onLogout, currentUser }) {
+export default function Navigation() {
+  const { actions } = useAppContext()
+
+  const handleReset = () => {
+    if (confirm('Are you sure you want to reset all circuits and settings?')) {
+      actions.resetState()
+    }
+  }
   return (
     <nav className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-800/50 sticky top-0 z-50">
       <div className="container mx-auto px-4">
@@ -29,17 +37,26 @@ export default function Navigation({ onLogout, currentUser }) {
 
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2 text-sm text-slate-400">
-              <User size={16} />
-              <span className="max-w-32 truncate">{currentUser}</span>
+              <span className="hidden sm:inline">Quantum Circuit Visualizer</span>
+              <span className="sm:hidden">QCV</span>
             </div>
 
-            <button
-              onClick={onLogout}
-              className="text-slate-400 hover:text-white p-2 rounded-lg transition-colors"
-              title="Logout"
-            >
-              <LogOut size={18} />
-            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleReset}
+                className="text-slate-400 hover:text-white p-2 rounded-lg transition-colors hover:bg-slate-800/50"
+                title="Reset All"
+              >
+                <RotateCcw size={18} />
+              </button>
+              
+              <button
+                className="text-slate-400 hover:text-white p-2 rounded-lg transition-colors hover:bg-slate-800/50"
+                title="Settings"
+              >
+                <Settings size={18} />
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import  { useMemo } from 'react'
+import { useMemo } from 'react'
 import { Zap, Link } from 'lucide-react'
 
 export default function EntanglementView({ quantumState, circuit }) {

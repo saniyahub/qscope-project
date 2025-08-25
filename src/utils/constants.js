@@ -1,7 +1,12 @@
-export  const ViewMode = {
+export const ViewMode = {
   BLOCH: 'bloch',
   PROBABILITY: 'probability',
   ENTANGLEMENT: 'entanglement'
+}
+
+export const SimulationMode = {
+  CLIENT_SIDE: 'client-side',
+  BACKEND: 'backend'
 }
 
 export const GateDescriptions = {

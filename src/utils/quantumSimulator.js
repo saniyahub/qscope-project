@@ -1,4 +1,4 @@
-class  Complex {
+class Complex {
   constructor(real = 0, imag = 0) {
     this.real = real
     this.imag = imag
@@ -28,7 +28,7 @@ function applyGate(state, gate, qubit, numQubits) {
   const gates = {
     H: [[1/Math.sqrt(2), 1/Math.sqrt(2)], [1/Math.sqrt(2), -1/Math.sqrt(2)]],
     X: [[0, 1], [1, 0]],
-    Y: [[0, -1], [1, 0]],
+    Y: [[new Complex(0, 0), new Complex(0, -1)], [new Complex(0, 1), new Complex(0, 0)]],
     Z: [[1, 0], [0, -1]],
     I: [[1, 0], [0, 1]]
   }
@@ -90,45 +90,57 @@ function calculateBlochVector(state, qubit, numQubits) {
 }
 
 export function simulate(circuit) {
-  const numQubits = Math.max(...circuit.map(g => g.qubit), 0) + 1 || 2
-  const stateSize = Math.pow(2, numQubits)
-  
-  let state = new Array(stateSize).fill(null).map(() => new Complex())
-  state[0] = new Complex(1)
-  
-  const sortedCircuit = [...circuit].sort((a, b) => a.position - b.position)
-  
-  sortedCircuit.forEach(gate => {
-    state = applyGate(state, gate.gate, gate.qubit, numQubits)
-  })
+  try {
+    const numQubits = Math.max(...circuit.map(g => g.qubit), 0) + 1 || 2
+    const stateSize = Math.pow(2, numQubits)
+    
+    let state = new Array(stateSize).fill(null).map(() => new Complex())
+    state[0] = new Complex(1)
+    
+    const sortedCircuit = [...circuit].sort((a, b) => a.position - b.position)
+    
+    sortedCircuit.forEach(gate => {
+      state = applyGate(state, gate.gate, gate.qubit, numQubits)
+    })
 
-  const qubits = []
-  for (let i = 0; i < numQubits; i++) {
-    const bloch = calculateBlochVector(state, i, numQubits)
-    qubits.push({ id: i, bloch })
-  }
-
-  const measurementProbabilities = state.map(amp => amp.magnitude() ** 2)
-  
-  let entanglement = 0
-  let purity = 0
-  
-  for (let i = 0; i < state.length; i++) {
-    const prob = measurementProbabilities[i]
-    if (prob > 0) {
-      entanglement -= prob * Math.log2(prob)
+    const qubits = []
+    for (let i = 0; i < numQubits; i++) {
+      const bloch = calculateBlochVector(state, i, numQubits)
+      qubits.push({ id: i, bloch })
     }
-    purity += prob * prob
-  }
-  
-  entanglement = Math.min(entanglement / numQubits, 1)
 
-  return {
-    qubits,
-    entanglement,
-    purity,
-    fidelity: Math.sqrt(purity),
-    measurementProbabilities
+    const measurementProbabilities = state.map(amp => amp.magnitude() ** 2)
+    
+    let entanglement = 0
+    let purity = 0
+    
+    for (let i = 0; i < state.length; i++) {
+      const prob = measurementProbabilities[i]
+      if (prob > 0) {
+        entanglement -= prob * Math.log2(prob)
+      }
+      purity += prob * prob
+    }
+    
+    entanglement = Math.min(entanglement / numQubits, 1)
+
+    return {
+      qubits,
+      entanglement,
+      purity,
+      fidelity: Math.sqrt(purity),
+      measurementProbabilities
+    }
+  } catch (error) {
+    console.error('Quantum simulation error:', error)
+    // Return a safe fallback state
+    return {
+      qubits: [{ id: 0, bloch: { x: 0, y: 0, z: 1 } }],
+      entanglement: 0,
+      purity: 1,
+      fidelity: 1,
+      measurementProbabilities: [1, 0]
+    }
   }
 }
  

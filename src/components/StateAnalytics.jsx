@@ -1,9 +1,79 @@
-import  { useMemo } from 'react' 
-import { BarChart, Activity, Target, Zap } from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react' 
+import { BarChart, Activity, Target, Zap, Brain, TrendingUp, AlertCircle } from 'lucide-react'
+import { useAppContext } from '../context/AppContext'
+import backendClient from '../services/backendClient'
 
-export  default function StateAnalytics({ quantumState, circuit }) { 
+export default function StateAnalytics() { 
+  const { quantumState, circuit } = useAppContext() 
+  const [detailedAnalysis, setDetailedAnalysis] = useState(null)
+  const [educationalContent, setEducationalContent] = useState(null)
+  const [backendAvailable, setBackendAvailable] = useState(false)
+  const [loading, setLoading] = useState(false)
+  
+  // Check backend availability
+  useEffect(() => {
+    const checkBackend = async () => {
+      const available = await backendClient.isBackendAvailable()
+      setBackendAvailable(available)
+    }
+    checkBackend()
+  }, [])
+  
+  // Enhanced analytics with backend integration
+  useEffect(() => {
+    const analyzeCircuit = async () => {
+      if (!circuit || circuit.length === 0 || !backendAvailable) {
+        setDetailedAnalysis(null)
+        setEducationalContent(null)
+        return
+      }
+      
+      setLoading(true)
+      try {
+        const [analysis, education] = await Promise.all([
+          backendClient.getRealTimeAnalysis({ gates: circuit }),
+          backendClient.getEducationalContent({ gates: circuit }, 'intermediate')
+        ])
+        
+        if (analysis.success) {
+          setDetailedAnalysis(analysis)
+        }
+        
+        if (education.success || education.current_concepts) {
+          setEducationalContent(education)
+        }
+      } catch (error) {
+        console.warn('Backend analysis failed, using local analytics:', error.message)
+        setDetailedAnalysis(null)
+        setEducationalContent(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    // Debounce the analysis
+    const timeoutId = setTimeout(analyzeCircuit, 500)
+    return () => clearTimeout(timeoutId)
+  }, [circuit, backendAvailable]) 
   const analytics = useMemo(() => {
     if (!quantumState) return null
+    
+    // Use backend analysis if available, otherwise fallback to local
+    const backendMetrics = detailedAnalysis?.analysis?.metrics
+    
+    if (backendMetrics?.basic_metrics) {
+      return {
+        entanglement: backendMetrics.entanglement_metrics?.total_entanglement || quantumState.entanglement || 0,
+        purity: backendMetrics.basic_metrics.purity || quantumState.purity || 1,
+        fidelity: backendMetrics.basic_metrics.ground_state_fidelity || quantumState.fidelity || 1,
+        probabilities: quantumState.measurementProbabilities || [],
+        advanced: {
+          von_neumann_entropy: backendMetrics.basic_metrics.von_neumann_entropy || 0,
+          linear_entropy: backendMetrics.basic_metrics.linear_entropy || 0,
+          coherence: backendMetrics.coherence_metrics?.l1_norm_coherence || 0
+        }
+      }
+    }
     
     return {
       entanglement: quantumState.entanglement || 0,
@@ -11,25 +81,35 @@ export  default function StateAnalytics({ quantumState, circuit }) {
       fidelity: quantumState.fidelity || 1,
       probabilities: quantumState.measurementProbabilities || []
     }
-  }, [quantumState])
+  }, [quantumState, detailedAnalysis])
 
-  const renderMetric = (icon, label, value, color = 'indigo') => (
-    <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
+  const renderMetric = (icon, label, value, color = 'indigo') => {
+    const colorClasses = {
+      indigo: 'bg-indigo-500',
+      purple: 'bg-purple-500',
+      green: 'bg-green-500',
+      blue: 'bg-blue-500',
+      red: 'bg-red-500',
+      orange: 'bg-orange-500',
+      teal: 'bg-teal-500'
+    }
+    
+    return (
+      <div className="bg-slate-800 rounded-lg p-3 border border-slate-700 flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-2">
           {icon}
-          <span className="text-sm font-medium text-slate-300">{label}</span>
+          <span className="text-xs font-medium text-slate-300 truncate">{label}</span>
         </div>
-        <span className="text-lg font-bold">{(value * 100).toFixed(1)}%</span>
+        <div className="text-lg font-bold mb-2">{(value * 100).toFixed(1)}%</div>
+        <div className="w-full bg-slate-700 rounded-full h-1.5">
+          <div 
+            className={`h-1.5 rounded-full ${colorClasses[color] || colorClasses.indigo} transition-all duration-500`}
+            style={{ width: `${value * 100}%` }}
+          />
+        </div>
       </div>
-      <div className="w-full bg-slate-700 rounded-full h-2">
-        <div 
-          className={`h-2 rounded-full bg-${color}-500 transition-all duration-500`}
-          style={{ width: `${value * 100}%` }}
-        />
-      </div>
-    </div>
-  )
+    )
+  }
 
    return (
     <div className="bg-slate-900/80 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 shadow-2xl">
@@ -38,79 +118,113 @@ export  default function StateAnalytics({ quantumState, circuit }) {
         <h2 className="text-xl font-bold">State Analytics</h2>
       </div> 
 
-             {!analytics ? (
+      {!analytics ? (
         <div className="text-center py-8">
-          <BarChart size={64} className="text-slate-600 mx-auto mb-4 animate-pulse" />
-          <p className="text-slate-400 text-lg">Simulate circuit to view analytics</p>
+          <BarChart size={48} className="text-slate-600 mx-auto mb-4 animate-pulse" />
+          <p className="text-slate-400 text-base">Simulate circuit to view analytics</p>
           <p className="text-slate-500 text-sm mt-2">Track quantum state properties</p>
         </div> 
       ) : (
-        <div className="space-y-4">
-          {renderMetric(
-            <Zap size={16} className="text-purple-400" />,
-            'Entanglement',
-            analytics.entanglement,
-            'purple'
-          )}
-          
-          {renderMetric(
-            <Target size={16} className="text-green-400" />,
-            'Purity',
-            analytics.purity,
-            'green'
-          )}
-          
-          {renderMetric(
-            <Activity size={16} className="text-blue-400" />,
-            'Fidelity', 
-            analytics.fidelity,
-            'blue'
+        <div className="space-y-6">
+          {/* Enhanced metrics row with backend data */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {renderMetric(
+              <Zap size={14} className="text-purple-400" />,
+              'Entanglement',
+              analytics.entanglement,
+              'purple'
+            )}
+            
+            {renderMetric(
+              <Target size={14} className="text-green-400" />,
+              'Purity',
+              analytics.purity,
+              'green'
+            )}
+            
+            {renderMetric(
+              <Activity size={14} className="text-blue-400" />,
+              'Fidelity', 
+              analytics.fidelity,
+              'blue'
+            )}
+          </div>
+
+          {/* Advanced metrics if available from backend */}
+          {analytics.advanced && backendAvailable && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {renderMetric(
+                <Brain size={14} className="text-indigo-400" />,
+                'Von Neumann Entropy',
+                Math.min(analytics.advanced.von_neumann_entropy / 2, 1), // Normalize to 0-1
+                'indigo'
+              )}
+              
+              {renderMetric(
+                <TrendingUp size={14} className="text-orange-400" />,
+                'Linear Entropy',
+                analytics.advanced.linear_entropy,
+                'orange'
+              )}
+              
+              {renderMetric(
+                <Target size={14} className="text-teal-400" />,
+                'Coherence',
+                Math.min(analytics.advanced.coherence, 1), // Normalize to 0-1
+                'teal'
+              )}
+            </div>
           )}
 
-          {analytics.probabilities.length > 0 && (
-            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-              <h3 className="text-sm font-medium text-slate-300 mb-3">Measurement Probabilities</h3>
-              <div className="space-y-2">
-                {analytics.probabilities.slice(0, 8).map((prob, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <span className="text-xs font-mono text-slate-400 w-12">
-                      |{index.toString(2).padStart(Math.log2(analytics.probabilities.length)).padStart(3, '0')}⟩
-                    </span>
-                    <div className="flex-1 bg-slate-700 rounded-full h-1.5">
-                      <div 
-                        className="h-1.5 rounded-full bg-indigo-500 transition-all duration-500"
-                        style={{ width: `${(prob * 100).toFixed(1)}%` }}
-                      />
+          {/* Circuit Stats and Probabilities in horizontal layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Circuit Stats */}
+            <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+              <h3 className="text-sm font-medium text-slate-300 mb-3">Circuit Statistics</h3>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Gates:</span>
+                  <span className="font-mono text-slate-200">{circuit?.length || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Depth:</span>
+                  <span className="font-mono text-slate-200">{circuit?.length > 0 ? Math.max(...circuit.map(g => g.position)) + 1 : 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Qubits:</span>
+                  <span className="font-mono text-slate-200">{quantumState?.qubits?.length || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">States:</span>
+                  <span className="font-mono text-slate-200">{analytics?.probabilities?.length || 0}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Measurement Probabilities */}
+            {analytics.probabilities.length > 0 && (
+              <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+                <h3 className="text-sm font-medium text-slate-300 mb-3">Measurement Probabilities</h3>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {analytics.probabilities.slice(0, 6).map((prob, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <span className="text-xs font-mono text-slate-400 w-10 flex-shrink-0">
+                        |{index.toString(2).padStart(Math.log2(analytics.probabilities.length) || 1, '0').padStart(2, '0')}⟩
+                      </span>
+                      <div className="flex-1 bg-slate-700 rounded-full h-1.5">
+                        <div 
+                          className="h-1.5 rounded-full bg-indigo-500 transition-all duration-500"
+                          style={{ width: `${(prob * 100).toFixed(1)}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-mono text-slate-300 w-10 text-right flex-shrink-0">
+                        {(prob * 100).toFixed(1)}%
+                      </span>
                     </div>
-                    <span className="text-xs font-mono text-slate-300 w-12">
-                      {(prob * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-                   )}
-
-          <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700 mt-4">
-            <h3 className="text-sm font-medium text-slate-300 mb-3">Circuit Stats</h3>
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div className="flex justify-between">
-                <span className="text-slate-400">Gates:</span>
-                <span className="font-mono">{circuit?.length || 0}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Depth:</span>
-                <span className="font-mono">{circuit?.length > 0 ? Math.max(...circuit.map(g => g.position)) + 1 : 0}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Qubits:</span>
-                <span className="font-mono">{quantumState?.qubits?.length || 0}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">States:</span>
-                <span className="font-mono">{analytics?.probabilities?.length || 0}</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}

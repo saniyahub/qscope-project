@@ -1,14 +1,16 @@
-import  { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Play, Pause, RotateCcw, Zap } from 'lucide-react'
+import { useAppContext } from '../context/AppContext'
 
-export default function AnimatedCircuit({ circuit, onExecute, isExecuting }) {
+export default function AnimatedCircuit() {
+  const { circuit, actions } = useAppContext()
   const [animationState, setAnimationState] = useState('idle')
   const [currentStep, setCurrentStep] = useState(0)
   const [signals, setSignals] = useState([])
 
   const qubits = 3
-  const maxPosition = Math.max(...circuit.map(g => g.position), 7) + 1
+  const maxPosition = Math.max(...circuit.map(g => g.position), 9) + 1
 
   const executeAnimation = async () => {
     setAnimationState('running')
@@ -34,7 +36,7 @@ export default function AnimatedCircuit({ circuit, onExecute, isExecuting }) {
     
     setSignals([])
     setAnimationState('complete')
-    onExecute?.()
+    actions.simulateCircuit()
     
     setTimeout(() => setAnimationState('idle'), 1000)
   }
@@ -74,19 +76,19 @@ export default function AnimatedCircuit({ circuit, onExecute, isExecuting }) {
         </div>
       </div>
 
-      <div className="relative bg-slate-800/50 rounded-lg p-6 overflow-x-auto">
-        <div className="space-y-8 min-w-max">
+      <div className="relative bg-slate-800/50 rounded-lg p-8 overflow-x-auto">
+        <div className="space-y-10 min-w-max">
           {Array.from({ length: qubits }, (_, qubitIndex) => (
             <div key={qubitIndex} className="relative">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-6">
                 <motion.div 
-                  className="w-16 text-sm font-semibold text-slate-300 flex items-center"
+                  className="w-24 text-base font-semibold text-slate-300 flex items-center"
                   animate={{ 
                     textShadow: animationState === 'running' ? '0 0 10px rgb(79, 70, 229)' : 'none'
                   }}
                 >
                   <motion.div 
-                    className="w-3 h-3 bg-indigo-400 rounded-full mr-2"
+                    className="w-3 h-3 bg-indigo-400 rounded-full mr-3"
                     animate={{ 
                       scale: animationState === 'running' ? [1, 1.3, 1] : 1,
                       boxShadow: animationState === 'running' ? '0 0 20px rgb(79, 70, 229)' : 'none'
@@ -96,15 +98,18 @@ export default function AnimatedCircuit({ circuit, onExecute, isExecuting }) {
                   |q{qubitIndex}⟩
                 </motion.div>
 
-                <div className="relative flex-1 h-1">
-                  <motion.div 
-                    className="absolute inset-0 bg-gradient-to-r from-indigo-500/30 to-purple-500/30 rounded-full"
-                    animate={{
-                      boxShadow: animationState === 'running' ? 
-                        '0 0 20px rgb(79, 70, 229), 0 0 40px rgb(79, 70, 229)' : 
-                        'none'
-                    }}
-                  />
+                <div className="relative flex-1">
+                  {/* Main wire that goes through gate centers */}
+                  <div className="absolute left-0 right-0 top-1/2 h-0.5 transform -translate-y-1/2 z-10">
+                    <motion.div 
+                      className="w-full h-full bg-gradient-to-r from-indigo-500/40 to-purple-500/40 rounded-full"
+                      animate={{
+                        boxShadow: animationState === 'running' ? 
+                          '0 0 20px rgb(79, 70, 229), 0 0 40px rgb(79, 70, 229)' : 
+                          'none'
+                      }}
+                    />
+                  </div>
 
                   {/* Animated signal */}
                   <AnimatePresence>
@@ -112,13 +117,13 @@ export default function AnimatedCircuit({ circuit, onExecute, isExecuting }) {
                       <motion.div
                         initial={{ x: -10, opacity: 0 }}
                         animate={{ 
-                          x: `${maxPosition * 60}px`, 
+                          x: `${maxPosition * 80}px`, 
                           opacity: [0, 1, 1, 0],
                           scale: [0.8, 1.2, 1, 0.8]
                         }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 2, ease: "easeInOut" }}
-                        className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-yellow-400 rounded-full shadow-lg"
+                        className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-yellow-400 rounded-full shadow-lg z-30"
                         style={{
                           boxShadow: '0 0 20px rgb(251, 191, 36), 0 0 40px rgb(251, 191, 36)'
                         }}
@@ -126,41 +131,43 @@ export default function AnimatedCircuit({ circuit, onExecute, isExecuting }) {
                     )}
                   </AnimatePresence>
 
-                  {/* Gates */}
-                  {Array.from({ length: maxPosition }, (_, position) => {
-                    const gate = circuit.find(g => g.qubit === qubitIndex && g.position === position)
-                    const isActive = animationState === 'running' && position === currentStep
-                    
-                    return (
-                      <motion.div
-                        key={position}
-                        className="absolute w-12 h-12 -top-5.5"
-                        style={{ left: `${position * 60}px` }}
-                        animate={{
-                          scale: isActive ? [1, 1.2, 1] : 1,
-                          rotate: isActive ? [0, 360] : 0,
-                          boxShadow: isActive ? 
-                            '0 0 30px rgb(239, 68, 68), 0 0 60px rgb(239, 68, 68)' : 
-                            'none'
-                        }}
-                        transition={{ duration: 0.8 }}
-                      >
-                        {gate && (
-                          <motion.div
-                            className="w-full h-full bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-bold rounded-lg flex items-center justify-center border-2 border-white/20"
-                            animate={{
-                              backgroundColor: isActive ? 
-                                ['rgb(239, 68, 68)', 'rgb(251, 191, 36)', 'rgb(239, 68, 68)'] : 
-                                'rgb(239, 68, 68)'
-                            }}
-                            transition={{ duration: 0.8 }}
-                          >
-                            {gate.gate}
-                          </motion.div>
-                        )}
-                      </motion.div>
-                    )
-                  })}
+                  {/* Gates positioned on the wire */}
+                  <div className="relative h-16 flex items-center">
+                    {Array.from({ length: maxPosition }, (_, position) => {
+                      const gate = circuit.find(g => g.qubit === qubitIndex && g.position === position)
+                      const isActive = animationState === 'running' && position === currentStep
+                      
+                      return (
+                        <motion.div
+                          key={position}
+                          className="absolute w-14 h-14 flex items-center justify-center"
+                          style={{ left: `${position * 80}px`, transform: 'translateX(-50%)' }}
+                          animate={{
+                            scale: isActive ? [1, 1.2, 1] : 1,
+                            rotate: isActive ? [0, 360] : 0,
+                            boxShadow: isActive ? 
+                              '0 0 30px rgb(239, 68, 68), 0 0 60px rgb(239, 68, 68)' : 
+                              'none'
+                          }}
+                          transition={{ duration: 0.8 }}
+                        >
+                          {gate && (
+                            <motion.div
+                              className="w-full h-full bg-gradient-to-r from-red-500 to-red-600 text-white text-base font-bold rounded-lg flex items-center justify-center border-2 border-white/20 relative z-20"
+                              animate={{
+                                backgroundColor: isActive ? 
+                                  ['rgb(239, 68, 68)', 'rgb(251, 191, 36)', 'rgb(239, 68, 68)'] : 
+                                  'rgb(239, 68, 68)'
+                              }}
+                              transition={{ duration: 0.8 }}
+                            >
+                              {gate.gate}
+                            </motion.div>
+                          )}
+                        </motion.div>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
