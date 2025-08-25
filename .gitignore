@@ -137,3 +137,15 @@ FIXES_SUMMARY.md
 # Windows specific
 *.bat
 *.ps1
+
+# CLI tools and downloads
+render-cli/
+render-cli.zip
+*.zip
+*.tar.gz
+
+# Temporary development files
+deploy_prepare.py
+test_*.py
+*.tmp
+*.temp

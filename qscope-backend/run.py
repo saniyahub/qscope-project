@@ -8,14 +8,14 @@ import os
 from app import create_app
 from config import config
 
+# Get configuration from environment
+config_name = os.environ.get('FLASK_CONFIG', 'default')
+
+# Create Flask app with specified configuration - exposed at module level for Gunicorn
+app = create_app(config[config_name])
+
 def main():
     """Main function to run the Flask application"""
-    # Get configuration from environment
-    config_name = os.environ.get('FLASK_CONFIG', 'default')
-    
-    # Create Flask app with specified configuration
-    app = create_app(config[config_name])
-    
     # Get host and port from environment or use defaults
     host = os.environ.get('HOST', '127.0.0.1')
     port = int(os.environ.get('PORT', 5000))
