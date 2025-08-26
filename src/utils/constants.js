@@ -34,6 +34,11 @@ export const GateDescriptions = {
     name: 'Identity',
     description: 'Does nothing - leaves qubit unchanged',
     effect: 'No rotation (identity operation)'
+  },
+  CNOT: {
+    name: 'Controlled-NOT',
+    description: 'Flips target qubit if control qubit is |1⟩ - creates entanglement',
+    effect: 'Two-qubit gate: control qubit unchanged, target flipped conditionally'
   }
 }
  

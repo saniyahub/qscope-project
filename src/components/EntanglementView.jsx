@@ -6,16 +6,18 @@ export default function EntanglementView({ quantumState, circuit }) {
     if (!quantumState || !quantumState.qubits) return null
     
     const numQubits = quantumState.qubits.length
-    const connections = []
     
-    for (let i = 0; i < numQubits; i++) {
-      for (let j = i + 1; j < numQubits; j++) {
-        const entanglement = Math.random() * quantumState.entanglement
-        if (entanglement > 0.1) {
+    // Use calculated entangled pairs if available, otherwise fall back to heuristic
+    let connections = quantumState.entangledPairs || []
+    
+    // If no pairs detected but entanglement > 0.1, show generic connections
+    if (connections.length === 0 && quantumState.entanglement > 0.1) {
+      for (let i = 0; i < numQubits; i++) {
+        for (let j = i + 1; j < numQubits; j++) {
           connections.push({
             from: i,
             to: j,
-            strength: entanglement,
+            strength: quantumState.entanglement,
             id: `${i}-${j}`
           })
         }

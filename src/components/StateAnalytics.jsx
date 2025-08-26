@@ -199,6 +199,22 @@ export default function StateAnalytics() {
                   <span className="font-mono text-slate-200">{analytics?.probabilities?.length || 0}</span>
                 </div>
               </div>
+              
+              {/* Educational info for entanglement */}
+              {analytics.entanglement > 0.1 && (
+                <div className="mt-3 p-2 bg-purple-900/30 border border-purple-500/30 rounded text-xs">
+                  <div className="flex items-center gap-1 mb-1">
+                    <Zap size={10} className="text-purple-400" />
+                    <span className="text-purple-300 font-medium">Entanglement Detected!</span>
+                  </div>
+                  <p className="text-slate-300 text-xs leading-relaxed">
+                    {analytics.entanglement > 0.8 ? 
+                      "Maximum entanglement achieved - qubits are perfectly correlated!" :
+                      "Partial entanglement - qubits share quantum correlations."
+                    }
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Measurement Probabilities */}

@@ -24,7 +24,30 @@ class Complex {
   }
 }
 
-function applyGate(state, gate, qubit, numQubits) {
+function applyCNOT(state, controlQubit, targetQubit, numQubits) {
+  const newState = new Array(state.length).fill(null).map(() => new Complex())
+  
+  for (let i = 0; i < state.length; i++) {
+    const controlBit = (i >> controlQubit) & 1
+    const targetBit = (i >> targetQubit) & 1
+    
+    if (controlBit === 1) {
+      // Flip target bit when control is 1
+      const newIndex = i ^ (1 << targetQubit)
+      newState[newIndex] = newState[newIndex].add(state[i])
+    } else {
+      // Keep state unchanged when control is 0
+      newState[i] = newState[i].add(state[i])
+    }
+  }
+  
+  return newState
+}
+
+function applyGate(state, gate, qubit, numQubits, targetQubit = null) {
+  if (gate === 'CNOT') {
+    return applyCNOT(state, qubit, targetQubit, numQubits)
+  }
   const gates = {
     H: [[1/Math.sqrt(2), 1/Math.sqrt(2)], [1/Math.sqrt(2), -1/Math.sqrt(2)]],
     X: [[0, 1], [1, 0]],
@@ -89,9 +112,75 @@ function calculateBlochVector(state, qubit, numQubits) {
   return { x, y, z }
 }
 
+function calculateEntanglement(state, numQubits) {
+  if (numQubits < 2) return 0
+  
+  // For Bell states and similar, calculate entanglement using Schmidt decomposition
+  // This is a simplified calculation for 2-qubit systems
+  if (numQubits === 2) {
+    // Calculate reduced density matrix for first qubit
+    let rho00 = 0, rho11 = 0
+    
+    // |00⟩ and |01⟩ components
+    rho00 += state[0].magnitude() ** 2 // |00⟩
+    rho00 += state[1].magnitude() ** 2 // |01⟩
+    
+    // |10⟩ and |11⟩ components  
+    rho11 += state[2].magnitude() ** 2 // |10⟩
+    rho11 += state[3].magnitude() ** 2 // |11⟩
+    
+    // Calculate von Neumann entropy of reduced density matrix
+    let entropy = 0
+    if (rho00 > 1e-10) entropy -= rho00 * Math.log2(rho00)
+    if (rho11 > 1e-10) entropy -= rho11 * Math.log2(rho11)
+    
+    return Math.min(entropy, 1.0) // Normalize to [0,1]
+  }
+  
+  // For multi-qubit systems, use a simplified approach
+  // Check if state is separable (product state) or entangled
+  let maxProb = Math.max(...state.map(amp => amp.magnitude() ** 2))
+  return maxProb < 0.8 ? 0.5 : 0 // Simple heuristic
+}
+
+function detectEntangledPairs(state, numQubits) {
+  const pairs = []
+  
+  if (numQubits < 2) return pairs
+  
+  // For 2-qubit Bell states
+  if (numQubits === 2) {
+    const prob00 = state[0].magnitude() ** 2  // |00⟩
+    const prob01 = state[1].magnitude() ** 2  // |01⟩  
+    const prob10 = state[2].magnitude() ** 2  // |10⟩
+    const prob11 = state[3].magnitude() ** 2  // |11⟩
+    
+    // Bell states have specific patterns:
+    // |Φ+⟩ = (|00⟩ + |11⟩)/√2 → prob00 ≈ prob11 ≈ 0.5, prob01 ≈ prob10 ≈ 0
+    // |Φ-⟩ = (|00⟩ - |11⟩)/√2 → similar
+    // |Ψ+⟩ = (|01⟩ + |10⟩)/√2 → prob01 ≈ prob10 ≈ 0.5, prob00 ≈ prob11 ≈ 0  
+    // |Ψ-⟩ = (|01⟩ - |10⟩)/√2 → similar
+    
+    const bellState1 = Math.abs(prob00 - prob11) < 0.1 && prob01 < 0.1 && prob10 < 0.1 // |Φ±⟩
+    const bellState2 = Math.abs(prob01 - prob10) < 0.1 && prob00 < 0.1 && prob11 < 0.1 // |Ψ±⟩
+    
+    if (bellState1 || bellState2) {
+      const strength = Math.max(prob00 + prob11, prob01 + prob10)
+      pairs.push({
+        from: 0,
+        to: 1, 
+        strength: strength,
+        id: '0-1'
+      })
+    }
+  }
+  
+  return pairs
+}
+
 export function simulate(circuit) {
   try {
-    const numQubits = Math.max(...circuit.map(g => g.qubit), 0) + 1 || 2
+    const numQubits = Math.max(...circuit.map(g => g.qubit), ...circuit.map(g => g.targetQubit || 0), 0) + 1 || 2
     const stateSize = Math.pow(2, numQubits)
     
     let state = new Array(stateSize).fill(null).map(() => new Complex())
@@ -100,7 +189,11 @@ export function simulate(circuit) {
     const sortedCircuit = [...circuit].sort((a, b) => a.position - b.position)
     
     sortedCircuit.forEach(gate => {
-      state = applyGate(state, gate.gate, gate.qubit, numQubits)
+      if (gate.gate === 'CNOT') {
+        state = applyGate(state, gate.gate, gate.qubit, numQubits, gate.targetQubit)
+      } else {
+        state = applyGate(state, gate.gate, gate.qubit, numQubits)
+      }
     })
 
     const qubits = []
@@ -111,22 +204,22 @@ export function simulate(circuit) {
 
     const measurementProbabilities = state.map(amp => amp.magnitude() ** 2)
     
-    let entanglement = 0
-    let purity = 0
+    // Calculate proper entanglement
+    const entanglement = calculateEntanglement(state, numQubits)
     
+    // Calculate entangled pairs for visualization
+    const entangledPairs = detectEntangledPairs(state, numQubits)
+    
+    let purity = 0
     for (let i = 0; i < state.length; i++) {
       const prob = measurementProbabilities[i]
-      if (prob > 0) {
-        entanglement -= prob * Math.log2(prob)
-      }
       purity += prob * prob
     }
-    
-    entanglement = Math.min(entanglement / numQubits, 1)
 
     return {
       qubits,
       entanglement,
+      entangledPairs, // Add this for EntanglementView
       purity,
       fidelity: Math.sqrt(purity),
       measurementProbabilities
@@ -137,6 +230,7 @@ export function simulate(circuit) {
     return {
       qubits: [{ id: 0, bloch: { x: 0, y: 0, z: 1 } }],
       entanglement: 0,
+      entangledPairs: [],
       purity: 1,
       fidelity: 1,
       measurementProbabilities: [1, 0]

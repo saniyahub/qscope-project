@@ -30,7 +30,11 @@ class AdvancedQuantumSimulator:
             'X': np.array([[0, 1], [1, 0]]),
             'Y': np.array([[0, -1j], [1j, 0]]),
             'Z': np.array([[1, 0], [0, -1]]),
-            'I': np.array([[1, 0], [0, 1]])
+            'I': np.array([[1, 0], [0, 1]]),
+            'CNOT': np.array([[1, 0, 0, 0], 
+                             [0, 1, 0, 0], 
+                             [0, 0, 0, 1], 
+                             [0, 0, 1, 0]])
         }
     
     def simulate_basic(self, circuit_data: Dict) -> Dict:
@@ -197,8 +201,15 @@ class AdvancedQuantumSimulator:
         if not gates:
             return QuantumCircuit(2)  # Default 2-qubit circuit
         
-        # Determine number of qubits
-        max_qubit = max((gate.get('qubit', 0) for gate in gates), default=0)
+        # Determine number of qubits - consider both control and target qubits
+        max_qubit = 0
+        for gate in gates:
+            qubit = gate.get('qubit', 0)
+            target_qubit = gate.get('targetQubit')
+            max_qubit = max(max_qubit, qubit)
+            if target_qubit is not None:
+                max_qubit = max(max_qubit, target_qubit)
+        
         num_qubits = max_qubit + 1
         
         # Create circuit
@@ -217,6 +228,7 @@ class AdvancedQuantumSimulator:
         """Add a single gate to the quantum circuit"""
         gate_type = gate_data.get('gate', 'I')
         qubit = gate_data.get('qubit', 0)
+        target_qubit = gate_data.get('targetQubit')
         
         if gate_type == 'H':
             qc.h(qubit)
@@ -227,7 +239,14 @@ class AdvancedQuantumSimulator:
         elif gate_type == 'Z':
             qc.z(qubit)
         elif gate_type == 'I':
-            # Identity gate - explicitly add identity operation for completeness
+            qc.i(qubit)
+        elif gate_type == 'CNOT':
+            if target_qubit is not None:
+                qc.cx(qubit, target_qubit)
+            else:
+                logger.warning(f"CNOT gate missing target qubit, skipping")
+        else:
+            logger.warning(f"Unknown gate type: {gate_type}")
             qc.id(qubit)
         else:
             logger.warning(f"Unknown gate type: {gate_type}")

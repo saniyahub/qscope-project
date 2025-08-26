@@ -9,6 +9,7 @@ import ProbabilityView from './components/ProbabilityView'
 import LearningPanel from './components/LearningPanel'
 import EducationalPanel from './components/EducationalPanel'
 import AnimatedCircuit from './components/AnimatedCircuit'
+import EntanglementExplanation from './components/EntanglementExplanation'
 import Toolbar from './components/Toolbar'
 import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp'
 import ErrorNotification from './components/ErrorNotification'
@@ -187,6 +188,8 @@ function App() {
               {learningMode && (
                 <LearningPanel />
               )}
+              <AnimatedCircuit />
+              <EntanglementExplanation quantumState={quantumState} circuit={circuit} />
               <StateAnalytics />
               {learningMode && (
                 <div className="bg-slate-900/80 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
@@ -220,7 +223,6 @@ function App() {
             
             <div className="space-y-4">
               {renderVisualization()}
-              <AnimatedCircuit />
             </div>
           </div> 
         </div>

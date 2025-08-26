@@ -18,7 +18,7 @@ export default function CircuitBuilder() {
   const [draggedGate, setDraggedGate] = useState(null)
   const [hoveredSlot, setHoveredSlot] = useState(null)
 
-  const gates = ['H', 'X', 'Y', 'Z', 'I']
+  const gates = ['H', 'X', 'Y', 'Z', 'I', 'CNOT']
   
   // Categorized gates with colors and descriptions
   const gateCategories = {
@@ -33,6 +33,12 @@ export default function CircuitBuilder() {
       color: 'from-red-500 to-red-600',
       icon: '🔄',
       description: 'Fundamental quantum rotations'
+    },
+    'Two-Qubit Gates': {
+      gates: ['CNOT'],
+      color: 'from-purple-500 to-purple-600',
+      icon: '🔗',
+      description: 'Multi-qubit operations'
     },
     'Identity': {
       gates: ['I'],
@@ -51,7 +57,7 @@ export default function CircuitBuilder() {
       requiredQubits: 2,
       circuit: [
         { gate: 'H', qubit: 0, position: 0, id: 'preset_h_0' },
-        { gate: 'X', qubit: 1, position: 1, id: 'preset_x_1' }
+        { gate: 'CNOT', qubit: 0, targetQubit: 1, position: 1, id: 'preset_cnot_0_1' }
       ]
     },
     'GHZ State': {
@@ -61,8 +67,8 @@ export default function CircuitBuilder() {
       requiredQubits: 3,
       circuit: [
         { gate: 'H', qubit: 0, position: 0, id: 'preset_h_0' },
-        { gate: 'X', qubit: 1, position: 1, id: 'preset_x_1' },
-        { gate: 'X', qubit: 2, position: 1, id: 'preset_x_2' }
+        { gate: 'CNOT', qubit: 0, targetQubit: 1, position: 1, id: 'preset_cnot_0_1' },
+        { gate: 'CNOT', qubit: 0, targetQubit: 2, position: 2, id: 'preset_cnot_0_2' }
       ]
     },
     'Superposition': {
@@ -91,7 +97,8 @@ export default function CircuitBuilder() {
     X: 'from-red-500 to-red-600', 
     Y: 'from-red-500 to-red-600',
     Z: 'from-red-500 to-red-600',
-    I: 'from-gray-500 to-gray-600'
+    I: 'from-gray-500 to-gray-600',
+    CNOT: 'from-purple-500 to-purple-600'
   }
 
   useEffect(() => {
@@ -108,14 +115,28 @@ export default function CircuitBuilder() {
   const addGate = (qubit, position) => {
     if (!localSelectedGate) return
     
-    const newGate = { 
-      gate: localSelectedGate, 
-      qubit, 
-      position, 
-      id: Date.now() 
+    if (localSelectedGate === 'CNOT') {
+      // For CNOT, we need to select target qubit
+      // For now, default to next qubit (can be enhanced with UI selection)
+      const targetQubit = (qubit + 1) % qubits
+      const newGate = { 
+        gate: localSelectedGate, 
+        qubit, // control qubit
+        targetQubit,
+        position, 
+        id: Date.now() 
+      }
+      actions.addGateToCircuit(newGate)
+    } else {
+      const newGate = { 
+        gate: localSelectedGate, 
+        qubit, 
+        position, 
+        id: Date.now() 
+      }
+      actions.addGateToCircuit(newGate)
     }
     
-    actions.addGateToCircuit(newGate)
     actions.setSelectedGate(localSelectedGate)
   }
 
@@ -144,8 +165,20 @@ export default function CircuitBuilder() {
   }
 
   const addGateAtPosition = (gate, qubit, position) => {
-    const newGate = { gate, qubit, position, id: Date.now() }
-    actions.addGateToCircuit(newGate)
+    if (gate === 'CNOT') {
+      const targetQubit = (qubit + 1) % qubits
+      const newGate = { 
+        gate, 
+        qubit, // control qubit
+        targetQubit,
+        position, 
+        id: Date.now() 
+      }
+      actions.addGateToCircuit(newGate)
+    } else {
+      const newGate = { gate, qubit, position, id: Date.now() }
+      actions.addGateToCircuit(newGate)
+    }
     actions.setSelectedGate(gate)
   }
 
@@ -195,12 +228,22 @@ export default function CircuitBuilder() {
 
     // Check for common patterns and provide educational hints
     const hasHadamard = circuit.some(g => g.gate === 'H')
-    const hasEntanglement = circuit.some(g => g.gate === 'X' && circuit.some(h => h.gate === 'H' && h.qubit !== g.qubit))
+    const hasCNOT = circuit.some(g => g.gate === 'CNOT')
+    const hasEntanglement = hasHadamard && hasCNOT
     const hasPauliGates = circuit.some(g => ['X', 'Y', 'Z'].includes(g.gate))
     
-    if (hasHadamard && hasEntanglement) {
-      validation.messages.push('Great! This circuit creates entanglement')
+    if (hasEntanglement) {
+      validation.messages.push('Great! This circuit creates entanglement between qubits')
     }
+    
+    if (hasCNOT && !hasHadamard) {
+      validation.hints.push('Add H gate before CNOT to create superposition and entanglement')
+    }
+    
+    if (hasHadamard && !hasCNOT && qubits > 1) {
+      validation.hints.push('Try adding CNOT gate to create entanglement between qubits')
+    }
+
     
     if (hasHadamard && !hasPauliGates) {
       validation.hints.push('Add X, Y, or Z gates to create interesting quantum states')
@@ -236,7 +279,26 @@ export default function CircuitBuilder() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="grid gap-10 min-w-max">
+        <div className="grid gap-10 min-w-max relative">
+          {/* CNOT connection lines */}
+          {circuit.filter(g => g.gate === 'CNOT').map(gate => {
+            const controlY = gate.qubit * (64 + 40) // 64px row height + 40px gap
+            const targetY = gate.targetQubit * (64 + 40)
+            const x = gate.position * 80
+            
+            return (
+              <div
+                key={`cnot-line-${gate.id}`}
+                className="absolute w-0.5 bg-purple-400 z-15"
+                style={{
+                  left: `${x + 140}px`, // Offset for qubit label width + half gate width
+                  top: `${Math.min(controlY, targetY) + 32}px`, // Start from center of first qubit
+                  height: `${Math.abs(targetY - controlY)}px`
+                }}
+              />
+            )
+          })}
+          
           {Array.from({ length: qubits }, (_, qubitIndex) => (
             <motion.div 
               key={qubitIndex} 
@@ -269,6 +331,7 @@ export default function CircuitBuilder() {
                 <div className="relative h-16 flex items-center">
                   {Array.from({ length: maxPosition }, (_, position) => {
                     const gate = circuit.find(g => g.qubit === qubitIndex && g.position === position)
+                    const cnotGate = circuit.find(g => g.gate === 'CNOT' && g.position === position && (g.qubit === qubitIndex || g.targetQubit === qubitIndex))
                     const isHovered = hoveredSlot?.qubit === qubitIndex && hoveredSlot?.position === position
                     
                     return (
@@ -284,11 +347,12 @@ export default function CircuitBuilder() {
                         animate={{ scale: isHovered ? 1.1 : 1 }}
                       >
                         <AnimatePresence mode="wait">
-                          {gate ? (
+                          {gate && gate.gate !== 'CNOT' ? (
+                            // Regular single-qubit gates
                             <motion.button
                               key={gate.id}
                               onClick={() => removeGate(gate.id)}
-                              className={`w-full h-full bg-gradient-to-r ${gateColors[gate.gate]} border-2 border-white/30 text-white text-base font-bold rounded-lg hover:shadow-lg relative z-20`}
+                              className={`w-full h-full bg-gradient-to-r ${gateColors[gate.gate]} border-2 border-white/30 text-white text-xs font-bold rounded-lg hover:shadow-lg relative z-20`}
                               title={`${GateDescriptions[gate.gate].name} - Click to remove`}
                               initial={{ scale: 0, rotate: -180 }}
                               animate={{ 
@@ -307,7 +371,42 @@ export default function CircuitBuilder() {
                             >
                               {gate.gate}
                             </motion.button>
+                          ) : cnotGate ? (
+                            // CNOT gate display on both control and target qubits
+                            <motion.button
+                              key={cnotGate.id}
+                              onClick={() => removeGate(cnotGate.id)}
+                              className="w-full h-full bg-gradient-to-r from-purple-500 to-purple-600 border-2 border-white/30 text-white text-xs font-bold rounded-lg hover:shadow-lg relative z-20"
+                              title={`${GateDescriptions.CNOT.name} - Control: q${cnotGate.qubit}, Target: q${cnotGate.targetQubit} - Click to remove`}
+                              initial={{ scale: 0, rotate: -180 }}
+                              animate={{ 
+                                scale: 1, 
+                                rotate: 0,
+                                boxShadow: ['0 0 0px currentColor', '0 0 25px currentColor', '0 0 0px currentColor']
+                              }}
+                              exit={{ scale: 0, rotate: 180 }}
+                              whileHover={{ 
+                                scale: 1.15,
+                                boxShadow: '0 0 35px currentColor'
+                              }}
+                              transition={{ 
+                                boxShadow: { repeat: Infinity, duration: 2 }
+                              }}
+                            >
+                              {cnotGate.qubit === qubitIndex ? (
+                                // Control qubit (solid black dot)
+                                <div className="w-4 h-4 bg-white rounded-full mx-auto" />
+                              ) : (
+                                // Target qubit (circle with plus)
+                                <div className="flex items-center justify-center h-full">
+                                  <div className="w-6 h-6 border-2 border-white rounded-full flex items-center justify-center">
+                                    <span className="text-xs">⊕</span>
+                                  </div>
+                                </div>
+                              )}
+                            </motion.button>
                           ) : (
+                            // Empty slot
                             <motion.button
                               onClick={() => addGate(qubitIndex, position)}
                               className={`w-full h-full border-2 border-dashed rounded-lg transition-all duration-300 relative z-20 ${
