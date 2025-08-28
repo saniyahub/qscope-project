@@ -248,9 +248,6 @@ class AdvancedQuantumSimulator:
         else:
             logger.warning(f"Unknown gate type: {gate_type}")
             qc.id(qubit)
-        else:
-            logger.warning(f"Unknown gate type: {gate_type}")
-            # Default to no operation (identity)
     
     def _format_statevector(self, statevector: Statevector) -> List[Dict]:
         """Format statevector for JSON serialization"""
