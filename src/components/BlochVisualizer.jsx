@@ -1,9 +1,39 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Globe, Eye, RotateCcw } from 'lucide-react'
+import { Globe, Eye, RotateCcw, AlertTriangle } from 'lucide-react'
 import BlochSphere3D from './BlochSphere3D'
 
 export default function BlochVisualizer({ quantumState }) {
+  const [webglSupported, setWebglSupported] = useState(true)
+  const [retryKey, setRetryKey] = useState(0)
+
+  // Check WebGL support on mount
+  useEffect(() => {
+    const checkWebGL = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+        setWebglSupported(!!gl)
+        return !!gl
+      } catch (e) {
+        setWebglSupported(false)
+        return false
+      }
+    }
+
+    checkWebGL()
+  }, [])
+  const handleRetry = () => {
+    setRetryKey(prev => prev + 1)
+    
+    // Re-check WebGL support
+    setTimeout(() => {
+      const canvas = document.createElement('canvas')
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+      setWebglSupported(!!gl)
+    }, 100)
+  }
+
   const blochVectors = useMemo(() => {
     if (!quantumState) return []
     
@@ -98,19 +128,37 @@ export default function BlochVisualizer({ quantumState }) {
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ repeat: Infinity, duration: 2 }}
             >
-              <Eye size={14} />
+              {webglSupported ? <Eye size={14} /> : <AlertTriangle size={14} />}
             </motion.div>
-            <span>3D View</span>
+            <span>{webglSupported ? '3D View' : 'WebGL Issue'}</span>
           </div>
           <motion.button
+            onClick={handleRetry}
             className="p-2 bg-slate-800/50 rounded-lg border border-slate-600/50 hover:border-indigo-500/50 transition-colors"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            title="Retry 3D rendering"
           >
             <RotateCcw size={16} className="text-slate-400" />
           </motion.button>
         </div>
       </div>
+
+      {!webglSupported && (
+        <motion.div
+          className="mb-6 p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-lg"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+        >
+          <div className="flex items-center gap-2 text-yellow-400 mb-2">
+            <AlertTriangle size={16} />
+            <span className="font-semibold">WebGL Not Available</span>
+          </div>
+          <p className="text-sm text-yellow-300">
+            3D visualization requires WebGL support. You can still view the numerical Bloch vector data below.
+          </p>
+        </motion.div>
+      )}
 
       {blochVectors.length === 0 ? (
         <motion.div
@@ -150,7 +198,19 @@ export default function BlochVisualizer({ quantumState }) {
                   <h3 className="text-lg font-semibold text-indigo-300">Qubit {vector.id}</h3>
                 </div>
                 <div className="grid lg:grid-cols-2 gap-6">
-                  <BlochSphere3D vectors={[vector]} />
+                  {webglSupported ? (
+                    <div key={retryKey}>
+                      <BlochSphere3D vectors={[vector]} />
+                    </div>
+                  ) : (
+                    <div className="h-96 bg-slate-900/50 rounded-xl border border-slate-700/50 flex items-center justify-center">
+                      <div className="text-center p-6">
+                        <AlertTriangle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+                        <p className="text-slate-400 text-lg mb-2">3D View Unavailable</p>
+                        <p className="text-slate-500 text-sm">Check the numerical data →</p>
+                      </div>
+                    </div>
+                  )}
                   <div className="space-y-3">
                     {renderQubitInfo(vector, 0)}
                   </div>
@@ -166,7 +226,10 @@ export default function BlochVisualizer({ quantumState }) {
             transition={{ delay: 0.6 }}
           >
             <p className="text-sm text-slate-300">
-              <strong className="text-indigo-300">Tip:</strong> Drag to rotate, scroll to zoom, right-click to pan. Each sphere shows a qubit's quantum state in 3D space.
+              <strong className="text-indigo-300">Tip:</strong> {webglSupported 
+                ? 'Drag to rotate, scroll to zoom, right-click to pan. Each sphere shows a qubit\'s quantum state in 3D space.'
+                : 'The numerical values on the right show the same quantum state information as the 3D visualization.'
+              }
             </p>
           </motion.div>
         </div>

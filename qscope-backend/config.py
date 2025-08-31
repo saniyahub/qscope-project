@@ -15,7 +15,7 @@ class Config:
     # Quantum simulation settings
     MAX_QUBITS = int(os.environ.get('MAX_QUBITS', '10'))
     MAX_GATES_PER_CIRCUIT = int(os.environ.get('MAX_GATES_PER_CIRCUIT', '100'))
-    SIMULATION_TIMEOUT = int(os.environ.get('SIMULATION_TIMEOUT', '30'))  # seconds
+    SIMULATION_TIMEOUT = int(os.environ.get('SIMULATION_TIMEOUT', '60'))  # seconds
     
     # Educational content settings
     DEFAULT_DIFFICULTY_LEVEL = os.environ.get('DEFAULT_DIFFICULTY_LEVEL', 'beginner')
