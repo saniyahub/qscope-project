@@ -60,10 +60,12 @@ def register_blueprints(app):
         from app.routes.quantum import quantum_bp
         from app.routes.education import education_bp
         from app.routes.analytics import analytics_bp
+        from app.routes.qchat import qchat_bp
         
         app.register_blueprint(quantum_bp, url_prefix='/api/quantum')
         app.register_blueprint(education_bp, url_prefix='/api/education')
         app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
+        app.register_blueprint(qchat_bp, url_prefix='/api/qchat')
         
         app.logger.info("All blueprints registered successfully")
     except ImportError as e:

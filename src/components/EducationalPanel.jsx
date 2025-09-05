@@ -1,23 +1,44 @@
-import { useState } from 'react'
-import { Book, Brain, ChevronDown, ChevronUp, Target, Calculator, ArrowRight, BookOpen, Zap } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Book, Brain, ChevronDown, ChevronUp, Target, Calculator, ArrowRight, BookOpen, Zap, MessageCircle } from 'lucide-react'
+import ResizablePanel from './ResizablePanel'
 
-export default function EducationalPanel({ content, difficulty = 'beginner' }) {
+export default function EducationalPanel({ content, difficulty = 'beginner', circuit, onExplainMatrices }) {
   const [expandedSection, setExpandedSection] = useState('matrices')
+  const [panelSize, setPanelSize] = useState({
+    width: parseInt(localStorage.getItem('educationalPanelWidth')) || 600,
+    height: parseInt(localStorage.getItem('educationalPanelHeight')) || 700
+  })
 
   console.log('EducationalPanel received content:', content) // Debug log
 
+  const handleResize = (event, { size }) => {
+    setPanelSize(size);
+    localStorage.setItem('educationalPanelWidth', size.width);
+    localStorage.setItem('educationalPanelHeight', size.height);
+  };
+
   if (!content || (!content.current_concepts && !content.explanation)) {
     return (
-      <div className="bg-slate-900/80 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
-        <div className="flex items-center gap-3 mb-4">
-          <Book className="text-blue-400" size={20} />
-          <h3 className="text-lg font-semibold">Educational Content</h3>
+      <ResizablePanel
+        width={panelSize.width}
+        height={panelSize.height}
+        minWidth={400}
+        minHeight={500}
+        maxWidth={900}
+        maxHeight={1200}
+        onResizeStop={handleResize}
+      >
+        <div className="bg-slate-900/80 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 h-full">
+          <div className="flex items-center gap-3 mb-4">
+            <Book className="text-blue-400" size={20} />
+            <h3 className="text-lg font-semibold">Educational Content</h3>
+          </div>
+          <div className="text-center py-8">
+            <Brain size={48} className="text-slate-600 mx-auto mb-4 animate-pulse" />
+            <p className="text-slate-400">Build a circuit to see educational insights</p>
+          </div>
         </div>
-        <div className="text-center py-8">
-          <Brain size={48} className="text-slate-600 mx-auto mb-4 animate-pulse" />
-          <p className="text-slate-400">Build a circuit to see educational insights</p>
-        </div>
-      </div>
+      </ResizablePanel>
     )
   }
 
@@ -151,6 +172,21 @@ export default function EducationalPanel({ content, difficulty = 'beginner' }) {
                 <p className="text-xs text-blue-300 font-mono">{step.transformation}</p>
               </div>
             )}
+            
+            {/* Explain button for this step */}
+            <div className="mt-3 flex justify-end">
+              <button
+                onClick={() => onExplainMatrices && onExplainMatrices({
+                  circuit: circuit,
+                  step: step,
+                  index: index
+                })}
+                className="flex items-center gap-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded transition-colors"
+              >
+                <MessageCircle size={12} />
+                Explain
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -324,101 +360,111 @@ export default function EducationalPanel({ content, difficulty = 'beginner' }) {
   }
 
   return (
-    <div className="bg-slate-900/80 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <Book className="text-blue-400" size={20} />
-          <h3 className="text-lg font-semibold">Educational Content</h3>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">Level:</span>
-          <span className={`text-xs px-2 py-1 rounded text-white ${difficultyColors[difficulty] || difficultyColors.beginner}`}>
-            {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
-          </span>
-        </div>
-      </div>
-
-      {/* Active Concepts */}
-      {actualContent.current_concepts && actualContent.current_concepts.length > 0 && (
-        <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-          <h4 className="text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
-            <Target size={14} className="text-green-400" />
-            Active Concepts
-          </h4>
-          <div className="flex flex-wrap gap-2">
-            {actualContent.current_concepts.map((concept, index) => (
-              <span
-                key={index}
-                className="text-xs bg-green-900/30 text-green-300 px-2 py-1 rounded border border-green-800/30"
-              >
-                {concept.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Density Matrix Steps */}
-      <div className="bg-slate-800/50 rounded-lg border border-slate-700">
-        <button
-          onClick={() => toggleSection('matrices')}
-          className="w-full p-4 flex items-center justify-between hover:bg-slate-700/30 transition-colors rounded-lg"
-        >
+    <ResizablePanel
+      width={panelSize.width}
+      height={panelSize.height}
+      minWidth={450}
+      minHeight={600}
+      maxWidth={1000}
+      maxHeight={1400}
+      onResizeStop={handleResize}
+    >
+      <div className="bg-slate-900/80 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 space-y-4 h-full overflow-auto">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <Calculator size={16} className="text-purple-400" />
-            <span className="font-medium text-slate-200">Density Matrix Evolution</span>
+            <Book className="text-blue-400" size={20} />
+            <h3 className="text-lg font-semibold">Educational Content</h3>
           </div>
-          {expandedSection === 'matrices' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
-        
-        {expandedSection === 'matrices' && (
-          <div className="px-4 pb-4">
-            {renderDensityMatrixSteps()}
+          
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400">Level:</span>
+            <span className={`text-xs px-2 py-1 rounded text-white ${difficultyColors[difficulty] || difficultyColors.beginner}`}>
+              {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+            </span>
+          </div>
+        </div>
+
+        {/* Active Concepts */}
+        {actualContent.current_concepts && actualContent.current_concepts.length > 0 && (
+          <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+            <h4 className="text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+              <Target size={14} className="text-green-400" />
+              Active Concepts
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {actualContent.current_concepts.map((concept, index) => (
+                <span
+                  key={index}
+                  className="text-xs bg-green-900/30 text-green-300 px-2 py-1 rounded border border-green-800/30"
+                >
+                  {concept.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </span>
+              ))}
+            </div>
           </div>
         )}
-      </div>
 
-      {/* Terminology and Symbols */}
-      <div className="bg-slate-800/50 rounded-lg border border-slate-700">
-        <button
-          onClick={() => toggleSection('terminology')}
-          className="w-full p-4 flex items-center justify-between hover:bg-slate-700/30 transition-colors rounded-lg"
-        >
-          <div className="flex items-center gap-3">
-            <BookOpen className="text-indigo-400" size={16} />
-            <span className="font-medium text-slate-200">Terminology & Symbols</span>
-          </div>
-          {expandedSection === 'terminology' ? (
-            <ChevronUp size={16} className="lucide lucide-chevron-up" />
-          ) : (
-            <ChevronDown size={16} className="lucide lucide-chevron-down" />
+        {/* Density Matrix Steps */}
+        <div className="bg-slate-800/50 rounded-lg border border-slate-700">
+          <button
+            onClick={() => toggleSection('matrices')}
+            className="w-full p-4 flex items-center justify-between hover:bg-slate-700/30 transition-colors rounded-lg"
+          >
+            <div className="flex items-center gap-3">
+              <Calculator size={16} className="text-purple-400" />
+              <span className="font-medium text-slate-200">Density Matrix Evolution</span>
+            </div>
+            {expandedSection === 'matrices' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+          
+          {expandedSection === 'matrices' && (
+            <div className="px-4 pb-4">
+              {renderDensityMatrixSteps()}
+            </div>
           )}
-        </button>
-        {expandedSection === 'terminology' && (
-          <div className="px-4 pb-4">
-            {renderTerminologySection()}
+        </div>
+
+        {/* Terminology and Symbols */}
+        <div className="bg-slate-800/50 rounded-lg border border-slate-700">
+          <button
+            onClick={() => toggleSection('terminology')}
+            className="w-full p-4 flex items-center justify-between hover:bg-slate-700/30 transition-colors rounded-lg"
+          >
+            <div className="flex items-center gap-3">
+              <BookOpen className="text-indigo-400" size={16} />
+              <span className="font-medium text-slate-200">Terminology & Symbols</span>
+            </div>
+            {expandedSection === 'terminology' ? (
+              <ChevronUp size={16} className="lucide lucide-chevron-up" />
+            ) : (
+              <ChevronDown size={16} className="lucide lucide-chevron-down" />
+            )}
+          </button>
+          {expandedSection === 'terminology' && (
+            <div className="px-4 pb-4">
+              {renderTerminologySection()}
+            </div>
+          )}
+        </div>
+
+        {/* Suggested Next Steps */}
+        {actualContent.next_steps && actualContent.next_steps.length > 0 && (
+          <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+            <h4 className="text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+              <Target size={14} className="text-amber-400" />
+              Suggested Next Steps
+            </h4>
+            <div className="space-y-2">
+              {actualContent.next_steps.slice(0, 3).map((step, index) => (
+                <div key={index} className="text-sm text-slate-300 flex items-start gap-2">
+                  <span className="text-amber-400 mt-1 text-xs">→</span>
+                  <span>{step}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
-
-      {/* Suggested Next Steps */}
-      {actualContent.next_steps && actualContent.next_steps.length > 0 && (
-        <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-          <h4 className="text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
-            <Target size={14} className="text-amber-400" />
-            Suggested Next Steps
-          </h4>
-          <div className="space-y-2">
-            {actualContent.next_steps.slice(0, 3).map((step, index) => (
-              <div key={index} className="text-sm text-slate-300 flex items-start gap-2">
-                <span className="text-amber-400 mt-1 text-xs">→</span>
-                <span>{step}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+    </ResizablePanel>
   )
 }

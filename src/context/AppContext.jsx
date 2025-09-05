@@ -14,7 +14,7 @@ const initialState = {
     autoSimulate: true,
     defaultQubits: 3,
     animationSpeed: 'normal',
-    simulationMode: SimulationMode.CLIENT_SIDE
+    simulationMode: SimulationMode.BACKEND // Default to backend for accurate results
   },
   history: {
     past: [],
@@ -271,32 +271,25 @@ export function AppProvider({ children }) {
       try {
         let result
         
-        if (state.settings.simulationMode === SimulationMode.BACKEND) {
-          // Use backend simulation
-          console.log('Using backend simulation...')
-          const circuitData = {
-            gates: state.circuit.map(gate => ({
-              gate: gate.gate,
-              qubit: gate.qubit,
-              position: gate.position
-            }))
-          }
-          
-          try {
-            const backendResult = await backendClient.simulateCircuit(circuitData)
-            result = backendResult.result
-            console.log('Backend simulation successful:', result)
-          } catch (backendError) {
-            console.warn('Backend simulation failed, falling back to client-side:', backendError.message)
-            // Fallback to client-side simulation
-            const { simulate } = await import('../utils/quantumSimulator')
-            result = simulate(state.circuit)
-          }
-        } else {
-          // Use client-side simulation
-          console.log('Using client-side simulation...')
-          const { simulate } = await import('../utils/quantumSimulator')
-          result = simulate(state.circuit)
+        // Default to backend simulation for accurate Bloch visualization
+        console.log('Using backend simulation for Bloch sphere...')
+        const circuitData = {
+          gates: state.circuit.map(gate => ({
+            gate: gate.gate,
+            qubit: gate.qubit,
+            position: gate.position,
+            targetQubit: gate.targetQubit
+          }))
+        }
+        
+        try {
+          const backendResult = await backendClient.simulateCircuit(circuitData)
+          result = backendResult.result
+          console.log('Backend simulation successful:', result)
+        } catch (backendError) {
+          console.warn('Backend simulation failed:', backendError.message)
+          // Show error to user and potentially fall back
+          throw backendError
         }
         
         dispatch({ type: ActionTypes.SET_QUANTUM_STATE, payload: result })
@@ -311,8 +304,7 @@ export function AppProvider({ children }) {
           suggestions: [
             'Try simplifying the circuit',
             'Check if all gates are properly placed',
-            'Clear the circuit and start fresh',
-            state.settings.simulationMode === SimulationMode.BACKEND ? 'Check if backend is running or switch to client-side mode' : 'Try switching to backend mode for advanced features'
+            'Verify backend service is running'
           ],
           technicalDetails: error.message,
           timestamp: new Date().toISOString()

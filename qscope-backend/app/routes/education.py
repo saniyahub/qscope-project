@@ -6,6 +6,7 @@ Handles educational content, tutorials, and learning pathways
 from flask import Blueprint, request, jsonify, current_app
 from typing import Dict, Any
 import traceback
+import asyncio
 
 # Create blueprint
 education_bp = Blueprint('education', __name__)
@@ -55,6 +56,80 @@ def explain_concept():
         
         return jsonify({
             'error': 'Failed to generate explanation',
+            'message': str(e),
+            'success': False
+        }), 500
+
+@education_bp.route('/explain-concept-batch', methods=['POST'])
+def explain_concept_batch():
+    """
+    Get detailed explanations for multiple circuit states in batch
+    
+    Expected JSON payload:
+    {
+        "requests": [
+            {
+                "circuit_state": {
+                    "gates": [...],
+                    "current_step": 0
+                },
+                "user_level": "beginner|intermediate|advanced",
+                "id": "optional-identifier"
+            }
+        ]
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'requests' not in data:
+            return jsonify({
+                'error': 'Missing batch requests',
+                'message': 'Request body must include "requests" array'
+            }), 400
+        
+        batch_requests = data['requests']
+        
+        if not isinstance(batch_requests, list):
+            return jsonify({
+                'error': 'Invalid requests format',
+                'message': '"requests" must be an array'
+            }), 400
+        
+        # Import education engine and batch processor
+        from app.services.education_engine import EducationEngine
+        from app.utils.batch_processor import batch_processor
+        
+        education_engine = EducationEngine()
+        
+        # Prepare batch operations
+        operations = []
+        for i, req in enumerate(batch_requests):
+            circuit_state = req.get('circuit_state', {})
+            user_level = req.get('user_level', 'beginner')
+            req_id = req.get('id', f'req-{i}')
+            
+            operations.append({
+                'function': education_engine.get_contextual_explanation,
+                'args': (circuit_state, user_level),
+                'id': req_id
+            })
+        
+        # Process batch
+        results = batch_processor.process_batch_sync(operations)
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'message': f'Processed {len(results)} batch requests'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Batch concept explanation error: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        
+        return jsonify({
+            'error': 'Failed to process batch requests',
             'message': str(e),
             'success': False
         }), 500
@@ -256,6 +331,86 @@ def get_algorithm_tutorial(algorithm_name):
         
         return jsonify({
             'error': 'Failed to retrieve algorithm tutorial',
+            'message': str(e),
+            'success': False
+        }), 500
+
+@education_bp.route('/parallel-content', methods=['POST'])
+def get_parallel_content():
+    """
+    Get multiple types of educational content in parallel
+    
+    Expected JSON payload:
+    {
+        "circuit_state": {
+            "gates": [...]
+        },
+        "user_level": "beginner|intermediate|advanced",
+        "content_types": ["explanation", "questions", "tutorial_suggestion"]
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'error': 'Missing request data',
+                'message': 'Request body is required'
+            }), 400
+        
+        circuit_state = data.get('circuit_state', {})
+        user_level = data.get('user_level', 'beginner')
+        content_types = data.get('content_types', ['explanation'])
+        
+        # Import education engine and batch processor
+        from app.services.education_engine import EducationEngine
+        from app.utils.batch_processor import batch_processor
+        
+        education_engine = EducationEngine()
+        
+        # Prepare parallel operations
+        operations = []
+        
+        if 'explanation' in content_types:
+            operations.append({
+                'name': 'explanation',
+                'function': education_engine.get_contextual_explanation,
+                'args': (circuit_state, user_level)
+            })
+        
+        if 'questions' in content_types:
+            # Get primary concept for questions
+            concepts = education_engine._identify_concepts_in_circuit(circuit_state)
+            primary_concept = concepts[0] if concepts else 'general'
+            
+            operations.append({
+                'name': 'questions',
+                'function': education_engine.generate_interactive_questions,
+                'args': (primary_concept, user_level, 'multiple_choice')
+            })
+        
+        if 'tutorial_suggestion' in content_types:
+            operations.append({
+                'name': 'tutorial_suggestion',
+                'function': education_engine.get_guided_tutorial,
+                'args': (user_level,)
+            })
+        
+        # Execute operations in parallel
+        results = batch_processor.parallelize_operations(operations)
+        
+        return jsonify({
+            'success': True,
+            'content': results,
+            'message': 'Parallel content generation completed successfully'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Parallel content generation error: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        
+        return jsonify({
+            'error': 'Failed to generate parallel content',
             'message': str(e),
             'success': False
         }), 500

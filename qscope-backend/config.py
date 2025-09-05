@@ -20,6 +20,25 @@ class Config:
     # Educational content settings
     DEFAULT_DIFFICULTY_LEVEL = os.environ.get('DEFAULT_DIFFICULTY_LEVEL', 'beginner')
     ENABLE_DETAILED_EXPLANATIONS = os.environ.get('ENABLE_DETAILED_EXPLANATIONS', 'True').lower() == 'true'
+    
+    # OpenRouter API settings
+    OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY')
+    OPENROUTER_BASE_URL = os.environ.get('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1')
+    OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'openai/gpt-3.5-turbo')
+    
+    # Available free models from OpenRouter
+    OPENROUTER_FREE_MODELS = [
+        'deepseek/deepseek-r1-0528:free',
+        'z-ai/glm-4.5-air:free',
+        'openai/gpt-oss-20b:free',
+        'deepseek/deepseek-chat-v3-0324:free'
+    ]
+    
+    # QChat reliability settings
+    QCHAT_MAX_RETRIES = int(os.environ.get('QCHAT_MAX_RETRIES', '5'))
+    QCHAT_TIMEOUT = int(os.environ.get('QCHAT_TIMEOUT', '30'))  # seconds
+    QCHAT_CIRCUIT_BREAKER_THRESHOLD = int(os.environ.get('QCHAT_CIRCUIT_BREAKER_THRESHOLD', '3'))
+    QCHAT_CIRCUIT_BREAKER_TIMEOUT = int(os.environ.get('QCHAT_CIRCUIT_BREAKER_TIMEOUT', '60'))  # seconds
 
 class DevelopmentConfig(Config):
     """Development configuration"""
@@ -35,6 +54,7 @@ class ProductionConfig(Config):
     MAX_QUBITS = 8
     MAX_GATES_PER_CIRCUIT = 50
     SIMULATION_TIMEOUT = 15
+    QCHAT_TIMEOUT = 20  # Shorter timeout in production
 
 class TestingConfig(Config):
     """Testing configuration"""

@@ -6,7 +6,7 @@
 class BackendClient {
   constructor() {
     this.baseURL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-    this.timeout = 30000; // 30 seconds
+    this.timeout = 60000; // Increase timeout to 60 seconds for LLM requests
     this.retryAttempts = 3;
   }
 
@@ -49,6 +49,11 @@ class BackendClient {
       } catch (error) {
         console.warn(`Attempt ${attempt} failed for ${endpoint}:`, error.message);
         
+        // Don't retry if it's an abort error (timeout)
+        if (error.name === 'AbortError') {
+          throw new Error(`Request timed out after ${this.timeout/1000} seconds. The server might be processing a complex request.`);
+        }
+        
         if (attempt === this.retryAttempts) {
           throw new Error(`Backend request failed after ${this.retryAttempts} attempts: ${error.message}`);
         }
@@ -72,7 +77,7 @@ class BackendClient {
       console.log('baseURL from env:', import.meta.env.VITE_BACKEND_URL); // Debug log
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout for health check
       
       const response = await fetch(url, {
         method: 'GET',
@@ -427,6 +432,44 @@ class BackendClient {
     });
 
     return Promise.all(promises);
+  }
+
+  /**
+   * Query QChat AI assistant
+   * @param {string} query - User query
+   * @param {Array} conversationHistory - Previous conversation messages
+   * @param {string} model - Selected model (optional)
+   * @returns {Promise<Object>} - QChat response
+   */
+  async queryQChat(query, conversationHistory = [], model = null) {
+    const payload = { 
+      query, 
+      conversation_history: conversationHistory 
+    };
+    
+    // Add model to payload if provided
+    if (model) {
+      payload.model = model;
+    }
+    
+    // Use a longer timeout for QChat requests since LLMs can be slow
+    const qchatTimeout = 120000; // 2 minutes for QChat requests
+    
+    return this._fetch('/qchat/query', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      timeout: qchatTimeout
+    });
+  }
+
+  /**
+   * Get available QChat models
+   * @returns {Promise<Object>} - Available models
+   */
+  async getQChatModels() {
+    return this._fetch('/qchat/models', {
+      method: 'GET'
+    });
   }
 }
 

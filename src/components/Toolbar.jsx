@@ -5,7 +5,7 @@ import { useAppContext } from '../context/AppContext'
 import { exportToQiskitJSON, importFromQiskitJSON, validateQiskitJSON } from '../utils/qiskitFormat'
 import SimulationModeToggle from './SimulationModeToggle'
 
-export default function Toolbar() {
+export default function Toolbar({ onToggleQChat }) {
   const { 
     circuit, 
     actions, 
@@ -133,11 +133,17 @@ export default function Toolbar() {
             break
         }
       }
+      
+      // Ctrl+Shift+Q for QChat
+      if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'q') {
+        event.preventDefault()
+        onToggleQChat && onToggleQChat()
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [canUndo, canRedo, circuit.length])
+  }, [canUndo, canRedo, circuit.length, onToggleQChat])
 
   return (
     <div className="bg-slate-900/80 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 shadow-2xl">

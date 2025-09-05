@@ -448,7 +448,7 @@ export default function CircuitBuilder() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <motion.div 
         className="bg-slate-900/80 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 shadow-2xl"
         initial={{ opacity: 0, scale: 0.95 }}
@@ -492,7 +492,7 @@ export default function CircuitBuilder() {
         </div>
 
         <div className="mb-6">
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-4 mb-3">
             <motion.div
               animate={{ 
                 scale: [1, 1.2, 1],
@@ -516,7 +516,7 @@ export default function CircuitBuilder() {
               )}
             </AnimatePresence>
           </div>
-          <div className="space-y-6">
+          <div className="space-y-3">
             {Object.entries(gateCategories).map(([categoryName, category], categoryIndex) => (
               <motion.div 
                 key={categoryName}
@@ -584,8 +584,8 @@ export default function CircuitBuilder() {
         </div>
 
         {/* Preset Circuits Section */}
-        <div className="mt-8">
-          <div className="flex items-center gap-4 mb-4">
+        <div className="mt-6">
+          <div className="flex items-center gap-4 mb-3">
             <motion.div
               animate={{ 
                 scale: [1, 1.1, 1],
@@ -606,7 +606,7 @@ export default function CircuitBuilder() {
               Click to load famous quantum circuits
             </motion.div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {Object.entries(presetCircuits).map(([key, preset], index) => (
               <motion.button
                 key={key}
@@ -646,7 +646,7 @@ export default function CircuitBuilder() {
       {renderCircuitGrid()}
 
       <motion.div 
-        className="bg-slate-900/50 rounded-lg p-4 space-y-4"
+        className="bg-slate-900/50 rounded-lg p-4 space-y-3"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}

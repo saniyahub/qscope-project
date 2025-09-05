@@ -5,6 +5,8 @@ Provides educational content, tutorials, and learning pathways
 
 from typing import Dict, List, Any, Optional
 import logging
+import json
+from app.utils.cache import cache
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +21,7 @@ class EducationEngine:
         self.quantum_concepts = self._load_quantum_concepts()
         self.algorithms_library = self._load_algorithms_library()
     
+    @cache.cached(ttl=600)  # Cache for 10 minutes
     def get_contextual_explanation(self, circuit_state: Dict, user_level: str) -> Dict:
         """Provide level-appropriate explanations based on circuit state"""
         try:
@@ -40,6 +43,7 @@ class EducationEngine:
             logger.error(f"Error generating contextual explanation: {str(e)}")
             return self._fallback_explanation(user_level)
     
+    @cache.cached(ttl=3600)  # Cache for 1 hour (static content)
     def get_guided_tutorial(self, level: str) -> Dict:
         """Get progressive tutorial content for different learning levels"""
         tutorials = {
@@ -80,6 +84,7 @@ class EducationEngine:
             logger.error(f"Error generating learning path: {str(e)}")
             return []
     
+    @cache.cached(ttl=600)  # Cache for 10 minutes
     def generate_interactive_questions(self, concept: str, difficulty: str, question_type: str) -> List[Dict]:
         """Generate interactive questions for a concept"""
         try:
@@ -101,6 +106,7 @@ class EducationEngine:
             logger.error(f"Error generating questions: {str(e)}")
             return []
     
+    @cache.cached(ttl=3600)  # Cache for 1 hour (static content)
     def get_quantum_algorithms_library(self) -> Dict:
         """Get library of quantum algorithms with educational content"""
         return {
@@ -110,6 +116,7 @@ class EducationEngine:
             'total_count': len(self.algorithms_library)
         }
     
+    @cache.cached(ttl=3600)  # Cache for 1 hour (static content)
     def get_algorithm_tutorial(self, algorithm_name: str) -> Optional[Dict]:
         """Get detailed tutorial for a specific quantum algorithm"""
         if algorithm_name not in self.algorithms_library:

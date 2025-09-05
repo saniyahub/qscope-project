@@ -9,7 +9,11 @@ from qiskit_aer import AerSimulator
 import numpy as np
 from typing import Dict, List, Tuple, Any, Optional
 import logging
+import json
+import hashlib
 from app.utils.math_helpers import complex_to_dict, format_complex_number
+from app.utils.cache import cache
+from app.utils.job_queue import job_queue
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +41,7 @@ class AdvancedQuantumSimulator:
                              [0, 0, 1, 0]])
         }
     
+    @cache.cached(ttl=120)  # Cache for 2 minutes
     def simulate_basic(self, circuit_data: Dict) -> Dict:
         """
         Basic quantum circuit simulation for compatibility
@@ -83,9 +88,68 @@ class AdvancedQuantumSimulator:
                 'measurementProbabilities': [1, 0]
             }
     
+    def simulate_with_steps_async(self, circuit_data: Dict, options: Optional[Dict] = None) -> str:
+        """
+        Submit enhanced simulation with step-by-step analysis as an asynchronous job
+        
+        Args:
+            circuit_data: Circuit specification with gates array
+            options: Simulation options and preferences
+            
+        Returns:
+            Job ID for tracking the simulation
+        """
+        # Submit job to queue with high priority for interactive simulations
+        job_id = job_queue.submit_job(
+            self._simulate_with_steps_internal,
+            circuit_data,
+            options,
+            priority=10
+        )
+        
+        return job_id
+    
+    def get_simulation_result(self, job_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get the result of an asynchronous simulation job
+        
+        Args:
+            job_id: Job ID returned by simulate_with_steps_async
+            
+        Returns:
+            Simulation result or None if job not completed
+        """
+        job_status = job_queue.get_job_status(job_id)
+        
+        if not job_status:
+            return None
+            
+        if job_status['status'] == 'completed':
+            return job_status['result']
+        elif job_status['status'] == 'failed':
+            return self._error_fallback_result(job_status['error'])
+        elif job_status['status'] in ['pending', 'processing']:
+            return {'status': 'processing', 'job_id': job_id}
+        else:
+            return None
+    
+    @cache.cached(ttl=120)  # Cache for 2 minutes
     def simulate_with_steps(self, circuit_data: Dict, options: Optional[Dict] = None) -> Dict:
         """
-        Enhanced simulation with step-by-step analysis
+        Enhanced simulation with step-by-step analysis (synchronous version)
+        
+        Args:
+            circuit_data: Circuit specification with gates array
+            options: Simulation options and preferences
+            
+        Returns:
+            Comprehensive simulation result with step-by-step analysis
+        """
+        return self._simulate_with_steps_internal(circuit_data, options)
+    
+    def _simulate_with_steps_internal(self, circuit_data: Dict, options: Optional[Dict] = None) -> Dict:
+        """
+        Internal method for step-by-step simulation (used by both sync and async versions)
         
         Args:
             circuit_data: Circuit specification with gates array

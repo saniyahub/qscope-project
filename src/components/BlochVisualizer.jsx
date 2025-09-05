@@ -1,11 +1,13 @@
 import { useMemo, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Globe, Eye, RotateCcw, AlertTriangle } from 'lucide-react'
+import { Globe, Eye, RotateCcw, AlertTriangle, BarChart3 } from 'lucide-react'
 import BlochSphere3D from './BlochSphere3D'
+import BlochSphere2D from './BlochSphere2D'
 
 export default function BlochVisualizer({ quantumState }) {
   const [webglSupported, setWebglSupported] = useState(true)
   const [retryKey, setRetryKey] = useState(0)
+  const [viewMode, setViewMode] = useState('3d') // '3d' or '2d'
 
   // Check WebGL support on mount
   useEffect(() => {
@@ -14,15 +16,21 @@ export default function BlochVisualizer({ quantumState }) {
         const canvas = document.createElement('canvas')
         const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
         setWebglSupported(!!gl)
+        // Default to 2D if WebGL is not supported
+        if (!gl) {
+          setViewMode('2d')
+        }
         return !!gl
       } catch (e) {
         setWebglSupported(false)
+        setViewMode('2d')
         return false
       }
     }
 
     checkWebGL()
   }, [])
+
   const handleRetry = () => {
     setRetryKey(prev => prev + 1)
     
@@ -31,11 +39,18 @@ export default function BlochVisualizer({ quantumState }) {
       const canvas = document.createElement('canvas')
       const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
       setWebglSupported(!!gl)
+      if (!!gl) {
+        setViewMode('3d')
+      }
     }, 100)
   }
 
+  const toggleViewMode = () => {
+    setViewMode(prev => prev === '3d' ? '2d' : '3d')
+  }
+
   const blochVectors = useMemo(() => {
-    if (!quantumState) return []
+    if (!quantumState || !quantumState.qubits) return []
     
     return quantumState.qubits.map(qubit => ({
       x: qubit.bloch.x,
@@ -53,18 +68,6 @@ export default function BlochVisualizer({ quantumState }) {
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.1 }}
     >
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-indigo-300">Qubit {vector.id}</h3>
-        <motion.div
-          className="w-2 h-2 bg-indigo-400 rounded-full"
-          animate={{
-            scale: [1, 1.5, 1],
-            opacity: [1, 0.5, 1]
-          }}
-          transition={{ repeat: Infinity, duration: 2 }}
-        />
-      </div>
-      
       <div className="space-y-2 text-xs">
         <div className="flex justify-between items-center">
           <span className="text-slate-400">X:</span>
@@ -133,6 +136,15 @@ export default function BlochVisualizer({ quantumState }) {
             <span>{webglSupported ? '3D View' : 'WebGL Issue'}</span>
           </div>
           <motion.button
+            onClick={toggleViewMode}
+            className="p-2 bg-slate-800/50 rounded-lg border border-slate-600/50 hover:border-indigo-500/50 transition-colors"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            title={viewMode === '3d' ? 'Switch to 2D view' : 'Switch to 3D view'}
+          >
+            {viewMode === '3d' ? <BarChart3 size={16} className="text-slate-400" /> : <Globe size={16} className="text-slate-400" />}
+          </motion.button>
+          <motion.button
             onClick={handleRetry}
             className="p-2 bg-slate-800/50 rounded-lg border border-slate-600/50 hover:border-indigo-500/50 transition-colors"
             whileHover={{ scale: 1.05 }}
@@ -144,7 +156,7 @@ export default function BlochVisualizer({ quantumState }) {
         </div>
       </div>
 
-      {!webglSupported && (
+      {!webglSupported && viewMode === '3d' && (
         <motion.div
           className="mb-6 p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-lg"
           initial={{ opacity: 0, height: 0 }}
@@ -155,7 +167,7 @@ export default function BlochVisualizer({ quantumState }) {
             <span className="font-semibold">WebGL Not Available</span>
           </div>
           <p className="text-sm text-yellow-300">
-            3D visualization requires WebGL support. You can still view the numerical Bloch vector data below.
+            3D visualization requires WebGL support. Switching to 2D view.
           </p>
         </motion.div>
       )}
@@ -182,42 +194,27 @@ export default function BlochVisualizer({ quantumState }) {
           <p className="text-slate-500 text-sm">Visualize qubit states in interactive 3D</p>
         </motion.div>
       ) : (
-               <div className="space-y-6">
-          <div className="grid gap-6">
-            {blochVectors.map((vector) => (
-              <div key={vector.id} className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <motion.div
-                    className="w-3 h-3 bg-indigo-400 rounded-full"
-                    animate={{
-                      scale: [1, 1.3, 1],
-                      opacity: [1, 0.5, 1]
-                    }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                  />
-                  <h3 className="text-lg font-semibold text-indigo-300">Qubit {vector.id}</h3>
-                </div>
-                <div className="grid lg:grid-cols-2 gap-6">
-                  {webglSupported ? (
-                    <div key={retryKey}>
-                      <BlochSphere3D vectors={[vector]} />
-                    </div>
-                  ) : (
-                    <div className="h-96 bg-slate-900/50 rounded-xl border border-slate-700/50 flex items-center justify-center">
-                      <div className="text-center p-6">
-                        <AlertTriangle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-                        <p className="text-slate-400 text-lg mb-2">3D View Unavailable</p>
-                        <p className="text-slate-500 text-sm">Check the numerical data →</p>
-                      </div>
-                    </div>
-                  )}
-                  <div className="space-y-3">
-                    {renderQubitInfo(vector, 0)}
+        <div className="space-y-6">
+          {/* Individual panels for each qubit */}
+          {blochVectors.map((vector, index) => (
+            <div key={vector.id} className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+              <h3 className="text-sm font-semibold text-indigo-300 mb-3">Qubit {vector.id}</h3>
+              <div className="mb-4">
+                {viewMode === '3d' && webglSupported ? (
+                  // Individual 3D Visualization for each qubit
+                  <div key={`${retryKey}-${vector.id}`} className="h-64">
+                    <BlochSphere3D vectors={[vector]} />
                   </div>
-                </div>
+                ) : (
+                  // Individual 2D Visualization for each qubit
+                  <div className="h-64">
+                    <BlochSphere2D vectors={[vector]} />
+                  </div>
+                )}
               </div>
-            ))}
-          </div> 
+              {renderQubitInfo(vector, index)}
+            </div>
+          ))}
           
           <motion.div
             className="bg-gradient-to-r from-indigo-900/20 to-purple-900/20 rounded-lg p-4 border border-indigo-500/20"
@@ -226,9 +223,9 @@ export default function BlochVisualizer({ quantumState }) {
             transition={{ delay: 0.6 }}
           >
             <p className="text-sm text-slate-300">
-              <strong className="text-indigo-300">Tip:</strong> {webglSupported 
+              <strong className="text-indigo-300">Tip:</strong> {viewMode === '3d' && webglSupported
                 ? 'Drag to rotate, scroll to zoom, right-click to pan. Each sphere shows a qubit\'s quantum state in 3D space.'
-                : 'The numerical values on the right show the same quantum state information as the 3D visualization.'
+                : 'This 2D visualization shows the same quantum state information with charts and graphs.'
               }
             </p>
           </motion.div>
@@ -237,4 +234,3 @@ export default function BlochVisualizer({ quantumState }) {
     </motion.div>
   )
 }
- 
