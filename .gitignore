@@ -149,3 +149,63 @@ deploy_prepare.py
 test_*.py
 *.tmp
 *.temp
+
+# Additional files to ignore
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.svg
+*.ico
+
+# Log files
+*.log
+
+# Backup files
+*.bak
+*.backup
+
+# IDE specific files
+*.code-workspace
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Render deployment files
+render.yaml.bak
+
+# Netlify files
+.netlify/
+
+# Vite files
+.vite/
+
+# TypeScript build files
+*.tsbuildinfo
+
+# Package manager files
+yarn.lock
+pnpm-lock.yaml
+
+# Editor files
+*.sublime-project
+*.sublime-workspace
+
+# Development tools
+*.exe
+*.msi
+
+# Configuration backup files
+*.config.bak
+
+# Temporary files
+*.tmp
+*.temp
+~*
+*~
+
+# Build artifacts
+*.min.js
+*.min.css

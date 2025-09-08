@@ -12,6 +12,14 @@
   to = "/index.html"
   status = 200
 
+# API proxy for local development
+[[redirects]]
+  from = "/api/*"
+  to = "http://localhost:5000/api/:splat"
+  status = 200
+  force = true
+  conditions = {Role = ["admin"]}
+
 # Headers for security and performance
 [[headers]]
   for = "/*"
@@ -41,10 +49,10 @@
 
 # Environment variables for build (will be replaced by actual values in Netlify dashboard)
 [context.production.environment]
-  VITE_BACKEND_URL = "https://qscope-backend.onrender.com"
+  VITE_BACKEND_URL = "https://your-render-app-name.onrender.com"
 
 [context.deploy-preview.environment]
-  VITE_BACKEND_URL = "https://qscope-backend.onrender.com"
+  VITE_BACKEND_URL = "https://your-render-app-name.onrender.com"
 
 [context.branch-deploy.environment]
-  VITE_BACKEND_URL = "https://qscope-backend.onrender.com"
+  VITE_BACKEND_URL = "https://your-render-app-name.onrender.com"

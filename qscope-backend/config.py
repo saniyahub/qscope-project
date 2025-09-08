@@ -1,7 +1,12 @@
 import os
 from dotenv import load_dotenv
 
+# Load environment variables from .env file
 load_dotenv()
+
+# Also try to load .env.production if it exists and .env doesn't have the API key
+if not os.environ.get('OPENROUTER_API_KEY'):
+    load_dotenv('.env.production')
 
 class Config:
     """Base configuration class"""

@@ -1,0 +1,15 @@
+{
+  "project": "QScope Quantum Visualizer",
+  "version": "1.0.0",
+  "deployment_date": "1757302946.8382752",
+  "components": {
+    "frontend": {
+      "status": "ready",
+      "build_command": "npm run build"
+    },
+    "backend": {
+      "status": "configured",
+      "deploy_platform": "Render"
+    }
+  }
+}

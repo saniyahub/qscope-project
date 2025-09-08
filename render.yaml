@@ -8,15 +8,11 @@ services:
       pip install -r requirements.txt
     startCommand: |
       cd qscope-backend &&
-      python -m gunicorn --bind 0.0.0.0:$PORT run:app
+      gunicorn --bind 0.0.0.0:$PORT run:app
     plan: free
     region: oregon
     branch: main
     rootDir: .
-    env: python
-    buildFilter:
-      paths:
-        - qscope-backend/**
     envVars:
       - key: FLASK_ENV
         value: production
@@ -34,6 +30,16 @@ services:
         value: beginner
       - key: ENABLE_DETAILED_EXPLANATIONS
         value: True
+      - key: QCHAT_MAX_RETRIES
+        value: 5
+      - key: QCHAT_TIMEOUT
+        value: 60
+      - key: QCHAT_CIRCUIT_BREAKER_THRESHOLD
+        value: 3
+      - key: QCHAT_CIRCUIT_BREAKER_TIMEOUT
+        value: 60
+      - key: OPENROUTER_API_KEY
+        value: your-openrouter-api-key-here
     # Add these in Render dashboard:
     # SECRET_KEY: Generate a secure random string
-    # CORS_ORIGINS: Your Netlify app URL (e.g., https://qscope-quantum.netlify.app)
+    # CORS_ORIGINS: Your Netlify app URL (e.g., https://your-netlify-app.netlify.app)

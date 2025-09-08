@@ -1,229 +1,202 @@
-# 🚀 QScope Quantum Visualizer - Deployment Guide
+# QScope Quantum Visualizer - Deployment Guide
 
-## Netlify + Render Deployment Strategy
+This guide provides step-by-step instructions for deploying the QScope Quantum Visualizer to Netlify (frontend) and Render (backend).
 
-This guide walks you through deploying your quantum simulator using:
-- **Netlify**: Frontend hosting (React/Vite app)
-- **Render**: Backend hosting (Flask/Python API)
+## Prerequisites
 
-## 📋 Prerequisites
+1. Git repository with the QScope project
+2. Netlify account (for frontend deployment)
+3. Render account (for backend deployment)
+4. OpenRouter API key (for QChat functionality)
 
-1. **GitHub Repository**: Push your code to GitHub
-2. **Netlify Account**: Sign up at [netlify.com](https://netlify.com)
-3. **Render Account**: Sign up at [render.com](https://render.com)
+## Deployment Overview
 
-## 🎯 Step 1: Deploy Backend to Render
+The QScope application consists of two components:
+- **Frontend**: React application deployed to Netlify
+- **Backend**: Flask API deployed to Render
 
-### 1.1 Create New Web Service
-1. Go to [Render Dashboard](https://dashboard.render.com)
-2. Click "New +" → "Web Service"
-3. Connect your GitHub repository
-4. Configure the service:
-   - **Name**: `qscope-backend`
-   - **Branch**: `main`
-   - **Root Directory**: `qscope-backend`
-   - **Runtime**: `Python 3`
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `gunicorn --config gunicorn.conf.py app:app`
+## Frontend Deployment (Netlify)
 
-### 1.2 Environment Variables
-Add these environment variables in Render:
+### 1. Connect Repository to Netlify
 
-```bash
-FLASK_ENV=production
-DEBUG=False
-SECRET_KEY=your-super-secret-production-key-change-this-12345
-CORS_ORIGINS=https://your-netlify-app.netlify.app
-MAX_QUBITS=8
-MAX_GATES_PER_CIRCUIT=50
-SIMULATION_TIMEOUT=15
-DEFAULT_DIFFICULTY_LEVEL=beginner
-ENABLE_DETAILED_EXPLANATIONS=True
-```
-
-### 1.3 Important Notes
-- **SECRET_KEY**: Generate a secure random string (32+ characters)
-- **CORS_ORIGINS**: Will be updated after Netlify deployment
-- **Free Tier**: Render free tier spins down after 15 minutes of inactivity
-
-### 1.4 Expected Result
-Your backend will be available at: `https://your-service-name.onrender.com`
-
-## 🎯 Step 2: Deploy Frontend to Netlify
-
-### 2.1 Create New Site
-1. Go to [Netlify Dashboard](https://app.netlify.com)
-2. Click "Add new site" → "Import an existing project"
-3. Connect your GitHub repository
-4. Configure build settings:
-   - **Base directory**: `/` (root)
+1. Go to [Netlify](https://netlify.com) and sign in
+2. Click "New site from Git"
+3. Connect your Git provider (GitHub, GitLab, or Bitbucket)
+4. Select your QScope repository
+5. Configure the deployment settings:
    - **Build command**: `npm run build`
    - **Publish directory**: `dist`
+   - **Base directory**: Leave empty
 
-### 2.2 Environment Variables
-Add this environment variable in Netlify:
+### 2. Set Environment Variables
 
-```bash
-VITE_BACKEND_URL=https://your-render-service.onrender.com
-```
+In Netlify dashboard:
+1. Go to your site settings
+2. Navigate to "Environment variables"
+3. Add the following variable:
+   ```
+   VITE_BACKEND_URL = https://your-render-app-name.onrender.com
+   ```
 
-Replace `your-render-service` with your actual Render service name.
+### 3. Deploy
 
-### 2.3 Build & Deploy
-Netlify will automatically build and deploy your app.
+Netlify will automatically build and deploy your site. The first build may take a few minutes.
 
-## 🔄 Step 3: Update CORS Configuration
+## Backend Deployment (Render)
 
-### 3.1 Get Your Netlify URL
-After deployment, note your Netlify URL (e.g., `https://amazing-app-123456.netlify.app`)
+### 1. Connect Repository to Render
 
-### 3.2 Update Render Environment Variables
-Go back to Render and update the `CORS_ORIGINS` variable:
+1. Go to [Render](https://render.com) and sign in
+2. Click "New Web Service"
+3. Connect your Git provider
+4. Select your QScope repository
+5. Configure the service:
+   - **Name**: qscope-backend (or your preferred name)
+   - **Runtime**: Python 3
+   - **Build command**: 
+     ```
+     cd qscope-backend && pip install --upgrade pip && pip install -r requirements.txt
+     ```
+   - **Start command**: 
+     ```
+     cd qscope-backend && gunicorn --bind 0.0.0.0:$PORT run:app
+     ```
+   - **Plan**: Free (or select your preferred plan)
 
-```bash
-CORS_ORIGINS=https://amazing-app-123456.netlify.app,https://your-custom-domain.com
-```
+### 2. Set Environment Variables
 
-### 3.3 Redeploy Backend
-Render will automatically redeploy when you change environment variables.
+In Render dashboard:
+1. Go to your web service settings
+2. Navigate to "Environment variables"
+3. Add the following variables:
+   ```
+   FLASK_ENV = production
+   DEBUG = False
+   SECRET_KEY = your-super-secret-key-here
+   CORS_ORIGINS = https://your-netlify-app.netlify.app
+   OPENROUTER_API_KEY = your-openrouter-api-key-here
+   ```
 
-## 🎯 Step 4: Custom Domain (Optional)
+### 3. Deploy
 
-### 4.1 Netlify Custom Domain
-1. In Netlify dashboard, go to "Domain settings"
-2. Click "Add custom domain"
-3. Add your domain and configure DNS
+Render will automatically build and deploy your backend service. The first build may take a few minutes.
 
-### 4.2 Update CORS Again
-Update the `CORS_ORIGINS` in Render to include your custom domain.
+## Configuration After Deployment
 
-## 🔧 Configuration Files Overview
+### 1. Update Netlify Environment Variable
 
-### `netlify.toml`
-- Configures Netlify build and routing
-- Sets security headers
-- Handles SPA routing redirects
+Once your Render backend is deployed:
+1. Get your Render app URL (e.g., https://qscope-backend.onrender.com)
+2. Update the `VITE_BACKEND_URL` environment variable in Netlify with this URL
+3. Trigger a new build in Netlify
 
-### `render.yaml`
-- Defines Render service configuration
-- Specifies build and start commands
-- Sets environment variables
+### 2. Update Render Environment Variable
 
-### `.env.production`
-- Contains production environment variables
-- Must be configured with actual URLs
+Once your Netlify frontend is deployed:
+1. Get your Netlify app URL (e.g., https://qscope-quantum.netlify.app)
+2. Update the `CORS_ORIGINS` environment variable in Render with this URL
+3. Restart your Render service
 
-### `gunicorn.conf.py`
-- Production WSGI server configuration
-- Optimized for Render's infrastructure
+## Environment Variables Summary
 
-## 🚀 Deployment Commands
+### Frontend (Netlify)
+| Variable | Description | Example Value |
+|----------|-------------|---------------|
+| `VITE_BACKEND_URL` | Backend API URL | https://qscope-backend.onrender.com |
 
-### Frontend (Local Testing)
-```bash
-# Build for production
-npm run build
+### Backend (Render)
+| Variable | Description | Example Value |
+|----------|-------------|---------------|
+| `FLASK_ENV` | Flask environment | production |
+| `DEBUG` | Debug mode | False |
+| `SECRET_KEY` | Flask secret key | your-super-secret-key |
+| `CORS_ORIGINS` | Allowed origins | https://your-netlify-app.netlify.app |
+| `OPENROUTER_API_KEY` | OpenRouter API key | sk-or-v1-... |
+| `MAX_QUBITS` | Max qubits allowed | 8 |
+| `MAX_GATES_PER_CIRCUIT` | Max gates per circuit | 50 |
+| `SIMULATION_TIMEOUT` | Simulation timeout (seconds) | 15 |
+| `QCHAT_MAX_RETRIES` | QChat max retries | 5 |
+| `QCHAT_TIMEOUT` | QChat timeout (seconds) | 60 |
+| `QCHAT_CIRCUIT_BREAKER_THRESHOLD` | Circuit breaker threshold | 3 |
+| `QCHAT_CIRCUIT_BREAKER_TIMEOUT` | Circuit breaker timeout (seconds) | 60 |
 
-# Preview production build
-npm run preview
-```
+## Troubleshooting
 
-### Backend (Local Testing)
-```bash
-# Install production dependencies
-pip install -r requirements.txt
+### Frontend Issues
 
-# Run with gunicorn (production-like)
-cd qscope-backend
-gunicorn --config gunicorn.conf.py app:app
-```
+1. **Blank page after deployment**:
+   - Check browser console for errors
+   - Verify `VITE_BACKEND_URL` is correctly set
+   - Ensure CORS is properly configured on backend
 
-## 🐛 Troubleshooting
+2. **API connection errors**:
+   - Verify backend URL is accessible
+   - Check CORS configuration
+   - Ensure backend is running
 
-### Common Issues
+### Backend Issues
 
-1. **CORS Errors**
-   - Check `CORS_ORIGINS` environment variable in Render
-   - Ensure it matches your Netlify URL exactly
+1. **Application fails to start**:
+   - Check build logs in Render dashboard
+   - Verify all required environment variables are set
+   - Ensure requirements.txt is up to date
 
-2. **Backend Not Responding**
-   - Check Render service logs
-   - Verify environment variables
-   - Ensure `gunicorn` is installed
+2. **CORS errors**:
+   - Verify `CORS_ORIGINS` includes your frontend URL
+   - Check that the URL doesn't have trailing slashes
 
-3. **Frontend Build Fails**
-   - Check Node.js version (should be 18+)
-   - Verify `VITE_BACKEND_URL` environment variable
+3. **QChat not working**:
+   - Verify `OPENROUTER_API_KEY` is correctly set
+   - Check OpenRouter API status
 
-4. **Educational Content Not Loading**
-   - Check browser console for API errors
-   - Verify backend health endpoint: `https://your-backend.onrender.com/health`
+## Monitoring and Maintenance
 
-### Health Check URLs
+### Health Checks
 
-- **Backend Health**: `https://your-backend.onrender.com/health`
-- **Frontend**: `https://your-frontend.netlify.app`
+Both frontend and backend have health check endpoints:
+- Frontend: Visit your deployed site URL
+- Backend: Visit `https://your-render-app-name.onrender.com/health`
 
-## 💰 Cost Considerations
+### Performance Monitoring
 
-### Netlify (Free Tier)
-- 100GB bandwidth/month
-- Unlimited personal projects
-- 300 build minutes/month
+- Monitor Render logs for backend errors
+- Check Netlify analytics for frontend performance
+- Set up alerts for downtime
 
-### Render (Free Tier)
-- 750 hours/month (enough for 1 service)
-- 512MB RAM, 0.1 CPU
-- Services spin down after 15 minutes of inactivity
+### Updates
 
-### Recommendations
-- Start with free tiers
-- Monitor usage and upgrade as needed
-- Consider upgrading Render for better performance
+To update your deployment:
+1. Push changes to your Git repository
+2. Netlify and Render will automatically redeploy
+3. For environment variable changes, manually redeploy the affected service
 
-## 🔒 Security Best Practices
+## Scaling Considerations
 
-1. **Environment Variables**
-   - Never commit secrets to Git
-   - Use strong, unique SECRET_KEY
-   - Rotate keys regularly
+### Free Tier Limitations
 
-2. **CORS Configuration**
-   - Only allow trusted domains
-   - Avoid wildcard origins in production
+- **Netlify**: 100GB bandwidth/month, 300 build minutes/month
+- **Render**: 512MB RAM, 100GB bandwidth/month
 
-3. **API Rate Limiting**
-   - Consider implementing rate limiting
-   - Monitor for abuse
+### Production Considerations
 
-## 📈 Monitoring & Maintenance
+For production deployment, consider:
+- Upgrading to paid plans for better performance
+- Adding a custom domain
+- Setting up SSL certificates
+- Implementing monitoring and alerting
+- Adding a CDN for better global performance
 
-### Render Monitoring
-- Check service logs regularly
-- Monitor response times
-- Set up health check alerts
+## Support
 
-### Netlify Monitoring
-- Monitor build success rate
-- Check Core Web Vitals
-- Review function usage
+For issues with deployment:
+1. Check the documentation and this guide
+2. Review deployment logs
+3. Contact support for your deployment platform
+4. File issues in the project repository
 
-## 🎉 Success Checklist
+## Security Notes
 
-- [ ] Backend deployed and responding at `/health`
-- [ ] Frontend built and deployed successfully
-- [ ] CORS configured correctly
-- [ ] Educational content loading
-- [ ] Quantum simulations working
-- [ ] Matrices displaying properly
-- [ ] Custom domain configured (if applicable)
-
-## 📞 Support
-
-If you encounter issues:
-1. Check service logs in Render/Netlify dashboards
-2. Verify environment variables
-3. Test API endpoints directly
-4. Check browser console for errors
-
-Your quantum simulator should now be live and accessible worldwide! 🌍
+- Never commit secrets to your repository
+- Use environment variables for sensitive data
+- Regularly rotate API keys
+- Keep dependencies updated
